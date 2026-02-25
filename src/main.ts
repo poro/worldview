@@ -298,7 +298,7 @@ async function boot() {
 
   // Set initial camera — overview of Earth
   viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(-40, 30, 20000000),
+    destination: Cesium.Cartesian3.fromDegrees(-98, 39, 20000000),
     duration: 0,
   });
 
@@ -329,12 +329,6 @@ async function boot() {
   });
   debugLines.push(`Flight count: ${flightTracker.flightCount}`);
   debugLines.push(`Military: ${flightTracker.militaryCount}`);
-  // Temporary debug overlay
-  const dbg = document.createElement('div');
-  dbg.style.cssText = 'position:fixed;bottom:10px;left:10px;background:rgba(0,0,0,0.8);color:#0f0;font:12px monospace;padding:8px;z-index:99999;border:1px solid #0f0;max-width:400px;white-space:pre';
-  dbg.textContent = debugLines.join('\n');
-  document.body.appendChild(dbg);
-  setTimeout(() => dbg.remove(), 30000);
 
   // Update earthquake count
   hud.updateQuakeCount(earthquakeLayer.quakeCount);

@@ -4,9 +4,10 @@ const PROXY = 'https://worldview-proxy.mark-ollila.workers.dev';
 
 // Convert adsb.fi response to OpenSky format for compatibility
 function adsbfiToOpenSky(data: any): OpenSkyResponse {
-  if (!data.ac) return { time: data.now || Date.now() / 1000, states: null };
+  const aircraft = data.aircraft || data.ac;
+  if (!aircraft || aircraft.length === 0) return { time: data.now || Date.now() / 1000, states: null };
   
-  const states = data.ac.map((ac: any) => [
+  const states = aircraft.map((ac: any) => [
     ac.hex || '',           // 0: icao24
     ac.flight || '',        // 1: callsign
     ac.r || 'Unknown',      // 2: origin country (registration country)
@@ -35,16 +36,18 @@ export async function fetchFlights(bounds?: {
 }): Promise<OpenSkyResponse> {
   const isDev = import.meta.env.DEV;
 
-  // Use adsb.fi for global data (more reliable than OpenSky)
-  // adsb.fi supports lat/lon/dist queries - use center of bounds or default to global
+  // Use adsb.fi — dist is in nautical miles, max ~250 works reliably through proxy
   let target: string;
   if (bounds) {
     const lat = ((bounds.lamin + bounds.lamax) / 2).toFixed(4);
     const lon = ((bounds.lomin + bounds.lomax) / 2).toFixed(4);
-    target = `https://opendata.adsb.fi/api/v2/lat/${lat}/lon/${lon}/dist/500`;
+    const dist = Math.min(250, Math.max(50, Math.round(
+      Math.abs(bounds.lamax - bounds.lamin) * 60 / 2
+    )));
+    target = `https://opendata.adsb.fi/api/v2/lat/${lat}/lon/${lon}/dist/${dist}`;
   } else {
-    // Global view - multiple regional queries
-    target = 'https://opendata.adsb.fi/api/v2/lat/30/lon/0/dist/15000';
+    // Default: centered on US east coast, 250nm radius
+    target = 'https://opendata.adsb.fi/api/v2/lat/39/lon/-77/dist/250';
   }
 
   const url = isDev

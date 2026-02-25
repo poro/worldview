@@ -1,27 +1,20 @@
-export const config = { runtime: 'edge' };
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-export default async function handler(request: Request) {
-  const url = new URL(request.url);
-  const group = url.searchParams.get('GROUP') || 'stations';
-  const format = url.searchParams.get('FORMAT') || 'tle';
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const group = (req.query.GROUP as string) || 'stations';
+  const format = (req.query.FORMAT as string) || 'tle';
   const target = `https://celestrak.org/NORAD/elements/gp.php?GROUP=${group}&FORMAT=${format}`;
 
   try {
-    const res = await fetch(target, {
-      headers: { 'User-Agent': 'WorldView/1.0' },
+    const response = await fetch(target, {
+      headers: { 'User-Agent': 'Mozilla/5.0 WorldView/1.0' },
     });
-    const data = await res.text();
-    return new Response(data, {
-      status: res.status,
-      headers: {
-        'Content-Type': 'text/plain',
-        'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'public, max-age=3600',
-      },
-    });
+    const data = await response.text();
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Content-Type', 'text/plain');
+    res.status(response.status).send(data);
   } catch (e) {
-    return new Response('CelesTrak unavailable', {
-      status: 502,
-    });
+    res.status(502).send('CelesTrak unavailable');
   }
 }

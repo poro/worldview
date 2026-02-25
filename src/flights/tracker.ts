@@ -168,11 +168,7 @@ export class FlightTracker {
 
   private async update() {
     try {
-      // Get camera center for regional query
-      const cameraPos = this.viewer.camera.positionCartographic;
-      const lat = Cesium.Math.toDegrees(cameraPos.latitude);
-      const lon = Cesium.Math.toDegrees(cameraPos.longitude);
-      const data = await fetchFlights({ lamin: lat - 5, lamax: lat + 5, lomin: lon - 5, lomax: lon + 5 });
+      const data = await fetchFlights();
       if (!data.states) return;
 
       this.lastUpdate = Date.now();

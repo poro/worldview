@@ -25,16 +25,16 @@ export class SatelliteRenderer {
   private orbitEntities: Map<string, Cesium.Entity> = new Map();
   private animInterval: ReturnType<typeof setInterval> | null = null;
   private _visible: boolean = true;
-  private _activeCategories: Set<string> = new Set(['stations', 'military', 'gps', 'weather']);
+  private _activeCategories: Set<string> = new Set(['stations', 'starlink', 'military', 'gps', 'weather']);
   private _selectedSat: SatellitePosition | null = null;
   private _selectedTle: TLERecord | null = null;
   private onSelect: ((sat: SatellitePosition | null) => void) | null = null;
   private onCountUpdate: ((count: number) => void) | null = null;
   private maxPerCategory: Record<string, number> = {
-    stations: 50,
-    starlink: 200,
-    military: 100,
-    weather: 50,
+    stations: 100,
+    starlink: 2000,
+    military: 300,
+    weather: 100,
     gps: 50,
   };
 

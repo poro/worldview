@@ -316,14 +316,25 @@ async function boot() {
     earthquakeLayer.load(),
   ]);
 
+  const names = ['Flights', 'Satellites', 'Earthquakes'];
+  const debugLines: string[] = [];
   results.forEach((r, i) => {
-    const names = ['Flights', 'Satellites', 'Earthquakes'];
     if (r.status === 'fulfilled') {
       console.log(`[WORLDVIEW] ${names[i]} ✓`);
+      debugLines.push(`${names[i]}: ✓`);
     } else {
       console.warn(`[WORLDVIEW] ${names[i]} failed:`, r.reason);
+      debugLines.push(`${names[i]}: ✗ ${r.reason}`);
     }
   });
+  debugLines.push(`Flight count: ${flightTracker.flightCount}`);
+  debugLines.push(`Military: ${flightTracker.militaryCount}`);
+  // Temporary debug overlay
+  const dbg = document.createElement('div');
+  dbg.style.cssText = 'position:fixed;bottom:10px;left:10px;background:rgba(0,0,0,0.8);color:#0f0;font:12px monospace;padding:8px;z-index:99999;border:1px solid #0f0;max-width:400px;white-space:pre';
+  dbg.textContent = debugLines.join('\n');
+  document.body.appendChild(dbg);
+  setTimeout(() => dbg.remove(), 30000);
 
   // Update earthquake count
   hud.updateQuakeCount(earthquakeLayer.quakeCount);

@@ -119,3 +119,54 @@
   border-color: rgba(0, 229, 255, 0.5);
   color: #00e5ff;
 }
+
+/* Effects panel sliders */
+.effect-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: #1a1a2e;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+.effect-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #00e5ff;
+  box-shadow: 0 0 6px rgba(0, 229, 255, 0.5);
+  cursor: pointer;
+}
+.effect-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #00e5ff;
+  box-shadow: 0 0 6px rgba(0, 229, 255, 0.5);
+  border: none;
+  cursor: pointer;
+}
+.effect-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+}
+.effect-dropdown {
+  cursor: pointer;
+}
+.effect-dropdown:focus {
+  border-color: rgba(0, 229, 255, 0.5);
+}
+
+/* CCTV feed panel */
+.cctv-feed-panel .cmd-panel {
+  box-shadow: 0 0 30px rgba(0, 229, 255, 0.1), 0 0 60px rgba(0, 0, 0, 0.5);
+}
+
+/* Effects panel animation */
+.effects-panel {
+  transition: all 0.2s ease;
+}

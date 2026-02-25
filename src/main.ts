@@ -8,6 +8,9 @@ import { EarthquakeLayer } from './osint/earthquakes';
 import { HUD } from './ui/hud';
 import { DetailPanel } from './ui/panel';
 import { Controls, LOCATION_PRESETS, LocationPreset } from './ui/controls';
+import { TrafficParticles } from './traffic/particles';
+import { CCTVLayer } from './cctv/feeds';
+import { EffectsPanel } from './ui/effects';
 
 // Boot sequence
 console.log(
@@ -24,11 +27,13 @@ const flightTracker = new FlightTracker(viewer);
 const satRenderer = new SatelliteRenderer(viewer);
 const filterManager = new FilterManager(viewer);
 const earthquakeLayer = new EarthquakeLayer(viewer);
+const trafficParticles = new TrafficParticles(viewer);
 const hud = new HUD(viewer);
 const detailPanel = new DetailPanel();
 
 // Wire up callbacks
 flightTracker.setOnCountUpdate((count) => hud.updateFlightCount(count));
+flightTracker.setOnMilitaryCountUpdate((count) => hud.updateMilitaryCount(count));
 satRenderer.setOnCountUpdate((count) => hud.updateSatCount(count));
 filterManager.setOnChange((mode) => hud.updateFilter(mode));
 
@@ -75,6 +80,17 @@ const controls = new Controls({
   onToggleEarthquakes: () => {
     earthquakeLayer.toggle();
     controls.setLayerState('earthquakes', earthquakeLayer.visible);
+  },
+  onToggleTraffic: () => {
+    trafficParticles.toggle();
+    controls.setLayerState('traffic', trafficParticles.visible);
+  },
+  onToggleMilitary: () => {
+    flightTracker.toggleMilitary();
+    controls.setLayerState('military', flightTracker.militaryMode);
+  },
+  onToggleCCTV: () => {
+    // CCTV layer — placeholder for future implementation
   },
   onToggleHUD: () => {
     hud.toggle();
@@ -148,6 +164,16 @@ document.addEventListener('keydown', (e) => {
       earthquakeLayer.toggle();
       controls.setLayerState('earthquakes', earthquakeLayer.visible);
       break;
+    case 't':
+    case 'T':
+      trafficParticles.toggle();
+      controls.setLayerState('traffic', trafficParticles.visible);
+      break;
+    case 'm':
+    case 'M':
+      flightTracker.toggleMilitary();
+      controls.setLayerState('military', flightTracker.militaryMode);
+      break;
     case 'h':
     case 'H':
       hud.toggle();
@@ -157,7 +183,7 @@ document.addEventListener('keydown', (e) => {
     case 'w': case 'W':
     case 'e': case 'E':
     case 'r': case 'R':
-    case 't': case 'T':
+    case 'o': case 'O':
     case 'y': case 'Y':
     case 'u': case 'U':
     case 'i': case 'I': {
@@ -255,6 +281,9 @@ async function boot() {
   // Load Google 3D Tiles (default view)
   await initGoogle3DTiles(viewer);
   controls.setTileMode(true);
+
+  // Start traffic particle system
+  trafficParticles.start();
 
   // Start data feeds (parallel)
   const results = await Promise.allSettled([

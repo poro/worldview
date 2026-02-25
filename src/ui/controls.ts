@@ -13,7 +13,7 @@ export const LOCATION_PRESETS: LocationPreset[] = [
   { key: 'W', label: 'Kremlin', lon: 37.6175, lat: 55.7520, alt: 800 },
   { key: 'E', label: 'Times Square', lon: -73.9855, lat: 40.7580, alt: 500 },
   { key: 'R', label: 'Shibuya', lon: 139.7004, lat: 35.6595, alt: 400 },
-  { key: 'T', label: 'Sydney Opera', lon: 151.2153, lat: -33.8568, alt: 600 },
+  { key: 'O', label: 'Sydney Opera', lon: 151.2153, lat: -33.8568, alt: 600 },
   { key: 'Y', label: 'Eiffel Tower', lon: 2.2945, lat: 48.8584, alt: 500 },
   { key: 'U', label: 'Burj Khalifa', lon: 55.2744, lat: 25.1972, alt: 800 },
   { key: 'I', label: 'Colosseum', lon: 12.4922, lat: 41.8902, alt: 400 },
@@ -24,6 +24,9 @@ export interface ControlCallbacks {
   onToggleFlights: () => void;
   onToggleSatellites: () => void;
   onToggleEarthquakes: () => void;
+  onToggleTraffic: () => void;
+  onToggleMilitary: () => void;
+  onToggleCCTV: () => void;
   onToggleHUD: () => void;
   onSearch: (query: string) => void;
   onLocationSelect: (preset: LocationPreset) => void;
@@ -102,8 +105,11 @@ export class Controls {
   private buildLayerPanel() {
     const layers = [
       { id: 'flights', label: 'FLIGHTS', icon: '✈', key: 'F', active: true },
+      { id: 'military', label: 'MILITARY', icon: '◆', key: 'M', active: false },
       { id: 'satellites', label: 'SATS', icon: '◉', key: 'S', active: true },
       { id: 'earthquakes', label: 'QUAKES', icon: '◎', key: 'G', active: true },
+      { id: 'traffic', label: 'TRAFFIC', icon: '●', key: 'T', active: true },
+      { id: 'cctv', label: 'CCTV', icon: '◎', key: 'C', active: true },
     ];
 
     const panel = document.createElement('div');
@@ -128,8 +134,11 @@ export class Controls {
       this.layerBtns.set(l.id, btn);
       btn.addEventListener('click', () => {
         if (l.id === 'flights') this.callbacks.onToggleFlights();
+        else if (l.id === 'military') this.callbacks.onToggleMilitary();
         else if (l.id === 'satellites') this.callbacks.onToggleSatellites();
         else if (l.id === 'earthquakes') this.callbacks.onToggleEarthquakes();
+        else if (l.id === 'traffic') this.callbacks.onToggleTraffic();
+        else if (l.id === 'cctv') this.callbacks.onToggleCCTV();
       });
     });
   }
@@ -258,8 +267,11 @@ export class Controls {
         <div class="space-y-0.5 text-[9px] text-gray-600">
           <div><span class="text-gray-500">1-5</span> Filters</div>
           <div><span class="text-gray-500">F</span> Flights</div>
+          <div><span class="text-gray-500">M</span> Military</div>
           <div><span class="text-gray-500">S</span> Sats</div>
+          <div><span class="text-gray-500">T</span> Traffic</div>
           <div><span class="text-gray-500">G</span> Quakes</div>
+          <div><span class="text-gray-500">C</span> CCTV</div>
           <div><span class="text-gray-500">H</span> HUD</div>
           <div><span class="text-gray-500">/</span> Search</div>
           <div class="mt-1 pt-1 border-t border-gray-800"><span class="text-cyan-600">Q-I</span> <span class="text-cyan-700">Locations</span></div>

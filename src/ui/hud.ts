@@ -14,6 +14,7 @@ export class HUD {
     cameraAlt: HTMLElement;
     filterMode: HTMLElement;
     flightCount: HTMLElement;
+    militaryCount: HTMLElement;
     satCount: HTMLElement;
     quakeCount: HTMLElement;
     dataAge: HTMLElement;
@@ -45,6 +46,10 @@ export class HUD {
 
   updateSatCount(count: number) {
     this.elements.satCount.textContent = count.toLocaleString();
+  }
+
+  updateMilitaryCount(count: number) {
+    this.elements.militaryCount.textContent = count.toLocaleString();
   }
 
   updateQuakeCount(count: number) {
@@ -123,6 +128,12 @@ export class HUD {
         </div>
         <div class="w-px h-4 bg-gray-800"></div>
         <div class="flex items-center gap-2">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#ff4500" stroke-width="1.5"><polygon points="8,1 14,8 8,15 2,8"/></svg>
+          <span class="data-label mr-1">MIL</span>
+          <span class="text-orange-400 text-xs font-medium" id="hud-military">0</span>
+        </div>
+        <div class="w-px h-4 bg-gray-800"></div>
+        <div class="flex items-center gap-2">
           <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
           <span class="data-label mr-1">SATS</span>
           <span class="text-cyan-400 text-xs font-medium" id="hud-sats">0</span>
@@ -167,6 +178,7 @@ export class HUD {
       cameraAlt: document.getElementById('hud-cam-alt')!,
       filterMode: document.getElementById('hud-filter')!,
       flightCount: document.getElementById('hud-flights')!,
+      militaryCount: document.getElementById('hud-military')!,
       satCount: document.getElementById('hud-sats')!,
       quakeCount: document.getElementById('hud-quakes')!,
       dataAge: document.getElementById('hud-data-age')!,

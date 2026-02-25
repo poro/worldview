@@ -28,14 +28,24 @@ const satRenderer = new SatelliteRenderer(viewer);
 const filterManager = new FilterManager(viewer);
 const earthquakeLayer = new EarthquakeLayer(viewer);
 const trafficParticles = new TrafficParticles(viewer);
+const cctvLayer = new CCTVLayer(viewer);
 const hud = new HUD(viewer);
 const detailPanel = new DetailPanel();
+const effectsPanel = new EffectsPanel();
 
 // Wire up callbacks
 flightTracker.setOnCountUpdate((count) => hud.updateFlightCount(count));
 flightTracker.setOnMilitaryCountUpdate((count) => hud.updateMilitaryCount(count));
 satRenderer.setOnCountUpdate((count) => hud.updateSatCount(count));
-filterManager.setOnChange((mode) => hud.updateFilter(mode));
+filterManager.setOnChange((mode) => {
+  hud.updateFilter(mode);
+  effectsPanel.setFilter(mode);
+});
+
+// Wire effects panel slider changes to filter manager
+effectsPanel.setOnParamChange((_filter, params) => {
+  filterManager.updateParams(params);
+});
 
 flightTracker.setOnSelect((flight) => {
   if (flight) detailPanel.showFlight(flight);
@@ -90,7 +100,8 @@ const controls = new Controls({
     controls.setLayerState('military', flightTracker.militaryMode);
   },
   onToggleCCTV: () => {
-    // CCTV layer — placeholder for future implementation
+    cctvLayer.toggle();
+    controls.setLayerState('cctv', cctvLayer.visible);
   },
   onToggleHUD: () => {
     hud.toggle();

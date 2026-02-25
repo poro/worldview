@@ -1,16 +1,24 @@
 import * as Cesium from 'cesium';
+import {
+  TRAFFIC_MAX_PARTICLES,
+  TRAFFIC_ALTITUDE_THRESHOLD,
+  TRAFFIC_CACHE_MARGIN,
+  TRAFFIC_FETCH_COOLDOWN,
+  TRAFFIC_ROAD_SPEEDS,
+  TRAFFIC_ROAD_WEIGHTS,
+} from '../config';
 
 interface RoadSegment {
   points: { lon: number; lat: number }[];
   type: 'motorway' | 'trunk' | 'primary' | 'secondary';
-  length: number; // approximate meters
+  length: number;
 }
 
 interface Particle {
   segmentIndex: number;
-  progress: number; // 0..1 along segment
-  speed: number; // progress per second
-  pointIndex: number; // index in PointPrimitiveCollection
+  progress: number;
+  speed: number;
+  pointIndex: number;
 }
 
 const ROAD_COLORS: Record<string, Cesium.Color> = {
@@ -27,19 +35,14 @@ const ROAD_PIXEL_SIZES: Record<string, number> = {
   secondary: 2.5,
 };
 
-// Speed in m/s by road type
-const ROAD_SPEEDS: Record<string, number> = {
-  motorway: 30,
-  trunk: 22,
-  primary: 14,
-  secondary: 9,
-};
-
-const MAX_PARTICLES = 2500;
-const ALTITUDE_THRESHOLD = 10000; // meters — only show below 10km
-const CACHE_MARGIN = 0.3; // 30% margin before refetching
-const FETCH_COOLDOWN = 5000; // ms between API calls
 const ROAD_TYPES_ORDERED = ['motorway', 'trunk', 'primary', 'secondary'] as const;
+
+interface BBox {
+  south: number;
+  west: number;
+  north: number;
+  east: number;
+}
 
 export class TrafficParticles {
   private viewer: Cesium.Viewer;
@@ -50,7 +53,7 @@ export class TrafficParticles {
   private _active: boolean = false;
   private animFrameId: number | null = null;
   private lastFetchTime: number = 0;
-  private cachedBbox: { south: number; west: number; north: number; east: number } | null = null;
+  private cachedBbox: BBox | null = null;
   private fetchingRoads: boolean = false;
   private lastFrameTime: number = 0;
 
@@ -60,9 +63,7 @@ export class TrafficParticles {
     this.viewer.scene.primitives.add(this.pointCollection);
   }
 
-  get visible(): boolean {
-    return this._visible;
-  }
+  get visible(): boolean { return this._visible; }
 
   start() {
     this._active = true;
@@ -90,17 +91,16 @@ export class TrafficParticles {
     if (!this._active) return;
 
     const now = performance.now();
-    const dt = Math.min((now - this.lastFrameTime) / 1000, 0.1); // cap delta
+    const dt = Math.min((now - this.lastFrameTime) / 1000, 0.1);
     this.lastFrameTime = now;
 
     if (this._visible) {
       const camAlt = this.viewer.camera.positionCartographic.height;
 
-      if (camAlt < ALTITUDE_THRESHOLD) {
+      if (camAlt < TRAFFIC_ALTITUDE_THRESHOLD) {
         this.checkAndFetchRoads();
         this.updateParticles(dt);
       } else {
-        // Too high — clear particles
         if (this.particles.length > 0) {
           this.clearParticles();
         }
@@ -112,18 +112,17 @@ export class TrafficParticles {
 
   private checkAndFetchRoads() {
     if (this.fetchingRoads) return;
-    if (Date.now() - this.lastFetchTime < FETCH_COOLDOWN) return;
+    if (Date.now() - this.lastFetchTime < TRAFFIC_FETCH_COOLDOWN) return;
 
     const bbox = this.getViewportBbox();
     if (!bbox) return;
 
-    // Check if we need to refetch
     if (this.cachedBbox && this.bboxContains(this.cachedBbox, bbox)) return;
 
     this.fetchRoadsSequential(bbox);
   }
 
-  private getViewportBbox(): { south: number; west: number; north: number; east: number } | null {
+  private getViewportBbox(): BBox | null {
     const canvas = this.viewer.scene.canvas;
     const corners = [
       new Cesium.Cartesian2(0, 0),
@@ -153,7 +152,6 @@ export class TrafficParticles {
 
     if (valid < 3) return null;
 
-    // Clamp to reasonable size (max ~0.5 degree span to avoid huge Overpass queries)
     const latSpan = north - south;
     const lonSpan = east - west;
     if (latSpan > 0.5 || lonSpan > 0.5) {
@@ -169,11 +167,8 @@ export class TrafficParticles {
     return { south, west, north, east };
   }
 
-  private bboxContains(
-    outer: { south: number; west: number; north: number; east: number },
-    inner: { south: number; west: number; north: number; east: number }
-  ): boolean {
-    const margin = CACHE_MARGIN * Math.max(outer.north - outer.south, outer.east - outer.west);
+  private bboxContains(outer: BBox, inner: BBox): boolean {
+    const margin = TRAFFIC_CACHE_MARGIN * Math.max(outer.north - outer.south, outer.east - outer.west);
     return (
       inner.south >= outer.south + margin &&
       inner.north <= outer.north - margin &&
@@ -182,13 +177,12 @@ export class TrafficParticles {
     );
   }
 
-  private async fetchRoadsSequential(bbox: { south: number; west: number; north: number; east: number }) {
+  private async fetchRoadsSequential(bbox: BBox) {
     this.fetchingRoads = true;
     this.lastFetchTime = Date.now();
 
-    // Expand bbox for caching
     const expand = 0.05;
-    const expandedBbox = {
+    const expandedBbox: BBox = {
       south: bbox.south - expand,
       west: bbox.west - expand,
       north: bbox.north + expand,
@@ -198,7 +192,6 @@ export class TrafficParticles {
     const newRoads: RoadSegment[] = [];
     const bboxStr = `${expandedBbox.south.toFixed(4)},${expandedBbox.west.toFixed(4)},${expandedBbox.north.toFixed(4)},${expandedBbox.east.toFixed(4)}`;
 
-    // Sequential loading: motorway → trunk → primary → secondary
     for (const roadType of ROAD_TYPES_ORDERED) {
       if (!this._active || !this._visible) break;
 
@@ -210,9 +203,9 @@ export class TrafficParticles {
         const data = await resp.json();
 
         if (data.elements) {
-          for (const elem of data.elements) {
+          for (const elem of data.elements as { geometry?: { lat: number; lon: number }[] }[]) {
             if (!elem.geometry || elem.geometry.length < 2) continue;
-            const points = elem.geometry.map((g: { lat: number; lon: number }) => ({
+            const points = elem.geometry.map((g) => ({
               lon: g.lon,
               lat: g.lat,
             }));
@@ -250,38 +243,30 @@ export class TrafficParticles {
     this.clearParticles();
     if (this.roads.length === 0) return;
 
-    // Distribute particles proportional to road length, weighted by type
-    const typeWeight: Record<string, number> = {
-      motorway: 3,
-      trunk: 2,
-      primary: 1.5,
-      secondary: 1,
-    };
-
     let totalWeight = 0;
     for (const road of this.roads) {
-      totalWeight += road.length * (typeWeight[road.type] || 1);
+      totalWeight += road.length * (TRAFFIC_ROAD_WEIGHTS[road.type] || 1);
     }
 
     if (totalWeight === 0) return;
 
     let particleCount = 0;
 
-    for (let i = 0; i < this.roads.length && particleCount < MAX_PARTICLES; i++) {
+    for (let i = 0; i < this.roads.length && particleCount < TRAFFIC_MAX_PARTICLES; i++) {
       const road = this.roads[i];
-      const weight = road.length * (typeWeight[road.type] || 1);
-      let count = Math.max(1, Math.round((weight / totalWeight) * MAX_PARTICLES));
-      count = Math.min(count, MAX_PARTICLES - particleCount);
+      const weight = road.length * (TRAFFIC_ROAD_WEIGHTS[road.type] || 1);
+      let count = Math.max(1, Math.round((weight / totalWeight) * TRAFFIC_MAX_PARTICLES));
+      count = Math.min(count, TRAFFIC_MAX_PARTICLES - particleCount);
 
       const color = ROAD_COLORS[road.type] || ROAD_COLORS.secondary;
       const pixelSize = ROAD_PIXEL_SIZES[road.type] || 2.5;
-      const speed = ROAD_SPEEDS[road.type] || 10;
+      const speed = TRAFFIC_ROAD_SPEEDS[road.type] || 10;
 
       for (let j = 0; j < count; j++) {
         const progress = Math.random();
         const pos = this.interpolatePosition(road, progress);
 
-        const point = this.pointCollection.add({
+        this.pointCollection.add({
           position: Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, 2),
           color,
           pixelSize,
@@ -306,7 +291,6 @@ export class TrafficParticles {
       const road = this.roads[particle.segmentIndex];
       if (!road) continue;
 
-      // Move forward
       particle.progress += particle.speed * dt;
       if (particle.progress > 1) {
         particle.progress -= 1;
@@ -324,7 +308,6 @@ export class TrafficParticles {
     const pts = road.points;
     if (pts.length < 2) return pts[0];
 
-    // Calculate cumulative distances
     const distances: number[] = [0];
     let totalDist = 0;
     for (let i = 1; i < pts.length; i++) {
@@ -336,7 +319,6 @@ export class TrafficParticles {
 
     const targetDist = progress * totalDist;
 
-    // Find segment
     for (let i = 1; i < distances.length; i++) {
       if (distances[i] >= targetDist) {
         const segLen = distances[i] - distances[i - 1];

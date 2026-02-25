@@ -8,10 +8,9 @@ export interface CameraFeed {
   lon: number;
   url: string;
   type: 'iframe' | 'img';
-  refreshInterval?: number; // seconds for img refresh
+  refreshInterval?: number;
 }
 
-// Hardcoded public camera feeds with known locations
 export const CAMERA_FEEDS: CameraFeed[] = [
   {
     id: 'times-square',
@@ -130,20 +129,14 @@ export class CCTVLayer {
   private entities: Map<string, Cesium.Entity> = new Map();
   private _visible: boolean = true;
   private activePanel: HTMLElement | null = null;
-  private activeFeedId: string | null = null;
 
   constructor(viewer: Cesium.Viewer) {
     this.viewer = viewer;
     this.render();
   }
 
-  get visible(): boolean {
-    return this._visible;
-  }
-
-  get feedCount(): number {
-    return CAMERA_FEEDS.length;
-  }
+  get visible(): boolean { return this._visible; }
+  get feedCount(): number { return CAMERA_FEEDS.length; }
 
   toggle() {
     this._visible = !this._visible;
@@ -151,7 +144,7 @@ export class CCTVLayer {
     if (!this._visible) this.closeFeedPanel();
   }
 
-  handlePick(pickedObject: any): boolean {
+  handlePick(pickedObject: { id?: Cesium.Entity }): boolean {
     if (pickedObject?.id?.properties?.type) {
       const type = pickedObject.id.properties.type.getValue(Cesium.JulianDate.now());
       if (type === 'cctv') {
@@ -168,13 +161,11 @@ export class CCTVLayer {
     if (this.activePanel) {
       this.activePanel.remove();
       this.activePanel = null;
-      this.activeFeedId = null;
     }
   }
 
   showFeedPanel(feed: CameraFeed) {
     this.closeFeedPanel();
-    this.activeFeedId = feed.id;
 
     const panel = document.createElement('div');
     panel.className = 'cctv-feed-panel fade-in';
@@ -185,19 +176,20 @@ export class CCTVLayer {
       transform: translate(-50%, -50%);
       z-index: 10000;
       pointer-events: auto;
+      max-width: calc(100vw - 32px);
     `;
 
     const now = new Date();
     const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
 
     panel.innerHTML = `
-      <div class="cmd-panel rounded-sm" style="width: 520px; border-color: rgba(0, 229, 255, 0.3);">
+      <div class="cmd-panel rounded-sm" style="width: 520px; max-width: 100%; border-color: rgba(0, 229, 255, 0.3);">
         <div class="flex items-center justify-between px-4 py-2 border-b border-gray-800/50">
           <div class="flex items-center gap-2">
             <div class="w-2 h-2 rounded-full bg-green-400 pulse-dot"></div>
             <span class="text-[10px] tracking-widest text-cyan-400 glow-cyan uppercase">LIVE FEED</span>
           </div>
-          <button class="cctv-close text-gray-500 hover:text-cyan-400 text-xs transition-colors pointer-events-auto">✕</button>
+          <button class="cctv-close text-gray-500 hover:text-cyan-400 text-xs transition-colors pointer-events-auto">\u2715</button>
         </div>
         <div class="relative bg-black" style="height: 300px;">
           ${feed.type === 'iframe' ? `
@@ -220,7 +212,7 @@ export class CCTVLayer {
           </div>
           <div class="flex items-center justify-between">
             <span class="text-[10px] text-gray-400">${feed.location}</span>
-            <span class="text-[9px] text-gray-600">${feed.lat.toFixed(4)}°, ${feed.lon.toFixed(4)}°</span>
+            <span class="text-[9px] text-gray-600">${feed.lat.toFixed(4)}\u00B0, ${feed.lon.toFixed(4)}\u00B0</span>
           </div>
         </div>
       </div>
@@ -232,7 +224,6 @@ export class CCTVLayer {
     const closeBtn = panel.querySelector('.cctv-close')!;
     closeBtn.addEventListener('click', () => this.closeFeedPanel());
 
-    // Close on Escape
     const escHandler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         this.closeFeedPanel();
@@ -243,38 +234,43 @@ export class CCTVLayer {
   }
 
   private render() {
-    for (const feed of CAMERA_FEEDS) {
-      const entity = this.viewer.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(feed.lon, feed.lat, 0),
-        billboard: {
-          image: CAMERA_SVG,
-          width: 24,
-          height: 24,
-          verticalOrigin: Cesium.VerticalOrigin.CENTER,
-          horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-          scaleByDistance: new Cesium.NearFarScalar(1e4, 1.5, 1e7, 0.5),
-          translucencyByDistance: new Cesium.NearFarScalar(1e4, 1.0, 2e7, 0.4),
-          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-        },
-        label: {
-          text: feed.name,
-          font: '10px JetBrains Mono',
-          fillColor: Cesium.Color.fromCssColorString('#00e5ff'),
-          outlineColor: Cesium.Color.BLACK,
-          outlineWidth: 2,
-          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-          pixelOffset: new Cesium.Cartesian2(0, -20),
-          scaleByDistance: new Cesium.NearFarScalar(1e4, 1.0, 5e6, 0.0),
-          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 3e6),
-        },
-        properties: {
-          type: 'cctv',
-          camId: feed.id,
-        },
-        show: this._visible,
-      });
+    this.viewer.entities.suspendEvents();
+    try {
+      for (const feed of CAMERA_FEEDS) {
+        const entity = this.viewer.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(feed.lon, feed.lat, 0),
+          billboard: {
+            image: CAMERA_SVG,
+            width: 24,
+            height: 24,
+            verticalOrigin: Cesium.VerticalOrigin.CENTER,
+            horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+            scaleByDistance: new Cesium.NearFarScalar(1e4, 1.5, 1e7, 0.5),
+            translucencyByDistance: new Cesium.NearFarScalar(1e4, 1.0, 2e7, 0.4),
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          },
+          label: {
+            text: feed.name,
+            font: '10px JetBrains Mono',
+            fillColor: Cesium.Color.fromCssColorString('#00e5ff'),
+            outlineColor: Cesium.Color.BLACK,
+            outlineWidth: 2,
+            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+            pixelOffset: new Cesium.Cartesian2(0, -20),
+            scaleByDistance: new Cesium.NearFarScalar(1e4, 1.0, 5e6, 0.0),
+            distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 3e6),
+          },
+          properties: {
+            type: 'cctv',
+            camId: feed.id,
+          },
+          show: this._visible,
+        });
 
-      this.entities.set(feed.id, entity);
+        this.entities.set(feed.id, entity);
+      }
+    } finally {
+      this.viewer.entities.resumeEvents();
     }
   }
 }

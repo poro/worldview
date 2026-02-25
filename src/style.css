@@ -83,7 +83,7 @@
   50% { opacity: 0; }
 }
 .blink-cursor::after {
-  content: '█';
+  content: '\2588';
   animation: blink-cursor 1s step-end infinite;
   color: #00ff88;
 }
@@ -169,4 +169,74 @@
 /* Effects panel animation */
 .effects-panel {
   transition: all 0.2s ease;
+}
+
+/* ============================
+   STATUS BAR COUNT FLASH/GLOW
+   ============================ */
+@keyframes count-flash {
+  0% { text-shadow: none; }
+  30% { text-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+  100% { text-shadow: none; }
+}
+.count-flash {
+  animation: count-flash 0.6s ease-out;
+}
+
+/* Subtle persistent glow on stat values */
+.stat-value {
+  text-shadow: 0 0 4px currentColor;
+  transition: text-shadow 0.3s ease;
+}
+
+/* Loading indicator */
+.loading-indicator {
+  letter-spacing: 0.1em;
+}
+
+/* ============================
+   RESPONSIVE — 1366x768 min
+   ============================ */
+@media (max-width: 1400px) {
+  .keybind-panel {
+    display: none;
+  }
+}
+
+@media (max-width: 1200px) {
+  /* Shrink search bar */
+  #search-input {
+    font-size: 10px;
+  }
+
+  /* Smaller filter buttons */
+  .filter-btn {
+    padding: 2px 6px;
+    font-size: 9px;
+  }
+
+  /* Compact layer panel */
+  .layer-toggle {
+    padding: 4px 6px;
+  }
+  .layer-toggle span {
+    font-size: 9px;
+  }
+}
+
+@media (max-height: 800px) {
+  /* Compact vertical spacing */
+  .keybind-panel {
+    display: none;
+  }
+
+  .cmd-panel {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+}
+
+/* Prevent overflow on small screens */
+#ui-overlay {
+  overflow: hidden;
 }

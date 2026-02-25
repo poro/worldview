@@ -19,6 +19,9 @@ export class HUD {
     quakeCount: HTMLElement;
     dataAge: HTMLElement;
     fpsCounter: HTMLElement;
+    loadingFlights: HTMLElement;
+    loadingSats: HTMLElement;
+    loadingQuakes: HTMLElement;
   };
 
   constructor(viewer: Cesium.Viewer) {
@@ -28,9 +31,7 @@ export class HUD {
     this.startUpdates();
   }
 
-  get visible(): boolean {
-    return this._visible;
-  }
+  get visible(): boolean { return this._visible; }
 
   toggle() {
     this._visible = !this._visible;
@@ -42,18 +43,25 @@ export class HUD {
 
   updateFlightCount(count: number) {
     this.elements.flightCount.textContent = count.toLocaleString();
+    this.elements.loadingFlights.style.display = 'none';
+    this.animateCount(this.elements.flightCount);
   }
 
   updateSatCount(count: number) {
     this.elements.satCount.textContent = count.toLocaleString();
+    this.elements.loadingSats.style.display = 'none';
+    this.animateCount(this.elements.satCount);
   }
 
   updateMilitaryCount(count: number) {
     this.elements.militaryCount.textContent = count.toLocaleString();
+    this.animateCount(this.elements.militaryCount);
   }
 
   updateQuakeCount(count: number) {
     this.elements.quakeCount.textContent = count.toLocaleString();
+    this.elements.loadingQuakes.style.display = 'none';
+    this.animateCount(this.elements.quakeCount);
   }
 
   updateFilter(mode: FilterMode) {
@@ -70,6 +78,13 @@ export class HUD {
   updateDataAge(ms: number) {
     const sec = Math.floor(ms / 1000);
     this.elements.dataAge.textContent = sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m`;
+  }
+
+  private animateCount(el: HTMLElement) {
+    el.classList.remove('count-flash');
+    // Force reflow to restart animation
+    void el.offsetWidth;
+    el.classList.add('count-flash');
   }
 
   private build() {
@@ -118,31 +133,34 @@ export class HUD {
     topRight.style.cssText = 'position:absolute;top:16px;right:16px;';
     this.container.appendChild(topRight);
 
-    // Bottom bar: stats
+    // Bottom bar: stats with loading indicators
     const bottomBar = this.createElement('hud-element', `
-      <div class="cmd-panel px-4 py-2 rounded-sm pointer-events-auto flex items-center gap-6">
+      <div class="cmd-panel px-4 py-2 rounded-sm pointer-events-auto flex items-center gap-4 flex-wrap justify-center">
         <div class="flex items-center gap-2">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="2"><path d="M12 2L8 10H2L4 13H8L10 22H14L12 13H20L22 10H16L12 2Z"/></svg>
           <span class="data-label mr-1">FLIGHTS</span>
-          <span class="text-green-400 text-xs font-medium" id="hud-flights">0</span>
+          <span class="text-green-400 text-xs font-medium stat-value" id="hud-flights">0</span>
+          <span class="loading-indicator text-[9px] text-gray-500 animate-pulse" id="loading-flights">LOADING...</span>
         </div>
         <div class="w-px h-4 bg-gray-800"></div>
         <div class="flex items-center gap-2">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#ff4500" stroke-width="1.5"><polygon points="8,1 14,8 8,15 2,8"/></svg>
           <span class="data-label mr-1">MIL</span>
-          <span class="text-orange-400 text-xs font-medium" id="hud-military">0</span>
+          <span class="text-orange-400 text-xs font-medium stat-value" id="hud-military">0</span>
         </div>
         <div class="w-px h-4 bg-gray-800"></div>
         <div class="flex items-center gap-2">
           <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
           <span class="data-label mr-1">SATS</span>
-          <span class="text-cyan-400 text-xs font-medium" id="hud-sats">0</span>
+          <span class="text-cyan-400 text-xs font-medium stat-value" id="hud-sats">0</span>
+          <span class="loading-indicator text-[9px] text-gray-500 animate-pulse" id="loading-sats">LOADING...</span>
         </div>
         <div class="w-px h-4 bg-gray-800"></div>
         <div class="flex items-center gap-2">
           <div class="w-2 h-2 rounded-full bg-red-400"></div>
           <span class="data-label mr-1">QUAKES</span>
-          <span class="text-red-400 text-xs font-medium" id="hud-quakes">0</span>
+          <span class="text-red-400 text-xs font-medium stat-value" id="hud-quakes">0</span>
+          <span class="loading-indicator text-[9px] text-gray-500 animate-pulse" id="loading-quakes">LOADING...</span>
         </div>
         <div class="w-px h-4 bg-gray-800"></div>
         <div class="flex items-center gap-2">
@@ -156,7 +174,7 @@ export class HUD {
         </div>
       </div>
     `);
-    bottomBar.style.cssText = 'position:absolute;bottom:16px;left:50%;transform:translateX(-50%);';
+    bottomBar.style.cssText = 'position:absolute;bottom:16px;left:50%;transform:translateX(-50%);max-width:calc(100vw - 32px);';
     this.container.appendChild(bottomBar);
 
     // Crosshair
@@ -183,6 +201,9 @@ export class HUD {
       quakeCount: document.getElementById('hud-quakes')!,
       dataAge: document.getElementById('hud-data-age')!,
       fpsCounter: document.getElementById('hud-fps')!,
+      loadingFlights: document.getElementById('loading-flights')!,
+      loadingSats: document.getElementById('loading-sats')!,
+      loadingQuakes: document.getElementById('loading-quakes')!,
     };
   }
 

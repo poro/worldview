@@ -1,4 +1,5 @@
 import { FilterMode } from '../filters/manager';
+import { TOAST_DURATION, ERROR_TOAST_DURATION } from '../config';
 
 export interface LocationPreset {
   key: string;
@@ -104,12 +105,12 @@ export class Controls {
 
   private buildLayerPanel() {
     const layers = [
-      { id: 'flights', label: 'FLIGHTS', icon: '✈', key: 'F', active: true },
-      { id: 'military', label: 'MILITARY', icon: '◆', key: 'M', active: false },
-      { id: 'satellites', label: 'SATS', icon: '◉', key: 'S', active: true },
-      { id: 'earthquakes', label: 'QUAKES', icon: '◎', key: 'G', active: true },
-      { id: 'traffic', label: 'TRAFFIC', icon: '●', key: 'T', active: true },
-      { id: 'cctv', label: 'CCTV', icon: '◎', key: 'C', active: true },
+      { id: 'flights', label: 'FLIGHTS', icon: '\u2708', key: 'F', active: true },
+      { id: 'military', label: 'MILITARY', icon: '\u25C6', key: 'M', active: false },
+      { id: 'satellites', label: 'SATS', icon: '\u25C9', key: 'S', active: true },
+      { id: 'earthquakes', label: 'QUAKES', icon: '\u25CE', key: 'G', active: true },
+      { id: 'traffic', label: 'TRAFFIC', icon: '\u25CF', key: 'T', active: true },
+      { id: 'cctv', label: 'CCTV', icon: '\u25CE', key: 'C', active: true },
     ];
 
     const panel = document.createElement('div');
@@ -146,15 +147,15 @@ export class Controls {
   private buildSearchBar() {
     const search = document.createElement('div');
     search.className = 'hud-element';
-    search.style.cssText = 'position:absolute;top:16px;left:50%;transform:translateX(-50%);';
+    search.style.cssText = 'position:absolute;top:16px;left:50%;transform:translateX(-50%);max-width:calc(100vw - 200px);';
     search.innerHTML = `
-      <div class="cmd-panel rounded-sm pointer-events-auto flex items-center px-3 py-1.5" style="min-width:300px">
-        <span class="text-green-400/50 text-xs mr-2">▸</span>
+      <div class="cmd-panel rounded-sm pointer-events-auto flex items-center px-3 py-1.5" style="min-width:260px;width:300px;">
+        <span class="text-green-400/50 text-xs mr-2">\u25B8</span>
         <input
           id="search-input"
           type="text"
-          class="bg-transparent border-none outline-none text-xs text-green-400 placeholder-gray-600 flex-1 font-mono"
-          placeholder="SEARCH LOCATION... (lat,lon or name)"
+          class="bg-transparent border-none outline-none text-xs text-green-400 placeholder-gray-600 flex-1 font-mono min-w-0"
+          placeholder="SEARCH LOCATION..."
           spellcheck="false"
         />
         <span class="text-[8px] text-gray-600">/</span>
@@ -176,19 +177,18 @@ export class Controls {
       e.stopPropagation();
     });
 
-    // Focus search on / key
-    (window as any).__searchInput = input;
+    (window as { __searchInput?: HTMLInputElement }).__searchInput = input;
   }
 
   private buildLocationsBar() {
     const bar = document.createElement('div');
     bar.className = 'hud-element';
-    bar.style.cssText = 'position:absolute;top:60px;left:50%;transform:translateX(-50%);';
+    bar.style.cssText = 'position:absolute;top:60px;left:50%;transform:translateX(-50%);max-width:calc(100vw - 100px);overflow-x:auto;';
     bar.innerHTML = `
       <div class="cmd-panel rounded-sm pointer-events-auto flex items-center gap-1 px-2 py-1.5">
-        <span class="data-label mr-1">NAV</span>
+        <span class="data-label mr-1 flex-shrink-0">NAV</span>
         ${LOCATION_PRESETS.map((p) => `
-          <button class="loc-btn px-2 py-1 text-[9px] tracking-wider border border-gray-800 rounded-sm hover:border-cyan-400/40 hover:text-cyan-400 transition-all text-gray-500" data-loc-key="${p.key}" title="${p.label}">
+          <button class="loc-btn px-2 py-1 text-[9px] tracking-wider border border-gray-800 rounded-sm hover:border-cyan-400/40 hover:text-cyan-400 transition-all text-gray-500 flex-shrink-0" data-loc-key="${p.key}" title="${p.label}">
             <span class="text-[7px] text-gray-600 mr-0.5">${p.key}</span>${p.label.split(' ')[0].toUpperCase().slice(0, 6)}
           </button>
         `).join('')}
@@ -239,22 +239,32 @@ export class Controls {
     this.toastEl.className = 'hud-element';
     this.toastEl.style.cssText = 'position:absolute;top:100px;left:50%;transform:translateX(-50%);opacity:0;transition:opacity 0.3s ease;pointer-events:none;z-index:100;';
     this.toastEl.innerHTML = `
-      <div class="cmd-panel rounded-sm px-4 py-2 text-center" style="border-color:rgba(0,229,255,0.4)">
+      <div class="cmd-panel rounded-sm px-4 py-2 text-center" id="toast-container" style="border-color:rgba(0,229,255,0.4)">
         <span id="toast-text" class="text-cyan-400 text-xs tracking-widest glow-cyan"></span>
       </div>
     `;
     this.container.appendChild(this.toastEl);
   }
 
-  showToast(text: string) {
+  showToast(text: string, type: 'info' | 'error' = 'info') {
     if (!this.toastEl) return;
     const span = this.toastEl.querySelector('#toast-text') as HTMLElement;
+    const container = this.toastEl.querySelector('#toast-container') as HTMLElement;
     span.textContent = text;
+
+    if (type === 'error') {
+      span.className = 'text-red-400 text-xs tracking-widest glow-red';
+      container.style.borderColor = 'rgba(255,61,61,0.4)';
+    } else {
+      span.className = 'text-cyan-400 text-xs tracking-widest glow-cyan';
+      container.style.borderColor = 'rgba(0,229,255,0.4)';
+    }
+
     this.toastEl.style.opacity = '1';
     if (this.toastTimeout) clearTimeout(this.toastTimeout);
     this.toastTimeout = setTimeout(() => {
       if (this.toastEl) this.toastEl.style.opacity = '0';
-    }, 2000);
+    }, type === 'error' ? ERROR_TOAST_DURATION : TOAST_DURATION);
   }
 
   private buildKeybindHint() {
@@ -262,7 +272,7 @@ export class Controls {
     hint.className = 'hud-element';
     hint.style.cssText = 'position:absolute;bottom:16px;right:16px;';
     hint.innerHTML = `
-      <div class="cmd-panel rounded-sm pointer-events-auto px-3 py-2">
+      <div class="cmd-panel rounded-sm pointer-events-auto px-3 py-2 keybind-panel">
         <div class="data-label mb-1.5">KEYS</div>
         <div class="space-y-0.5 text-[9px] text-gray-600">
           <div><span class="text-gray-500">1-5</span> Filters</div>

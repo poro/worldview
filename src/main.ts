@@ -11,6 +11,7 @@ import { Controls, LOCATION_PRESETS, LocationPreset } from './ui/controls';
 import { TrafficParticles } from './traffic/particles';
 import { CCTVLayer } from './cctv/feeds';
 import { EffectsPanel } from './ui/effects';
+import { DATA_AGE_UPDATE_INTERVAL } from './config';
 
 // Boot sequence
 console.log(
@@ -67,10 +68,15 @@ detailPanel.setOnClose(() => {
   satRenderer.selectByNoradId(null);
 });
 
+// Error callbacks — show toast on data feed failures
+flightTracker.setOnError((msg) => controls.showToast(msg, 'error'));
+satRenderer.setOnError((msg) => controls.showToast(msg, 'error'));
+earthquakeLayer.setOnError((msg) => controls.showToast(msg, 'error'));
+
 // Navigate to location preset
 function navigateToPreset(preset: LocationPreset) {
   flyToCinematic(viewer, preset.lon, preset.lat, preset.alt, 2);
-  controls.showToast(`NAVIGATING → ${preset.label.toUpperCase()}`);
+  controls.showToast(`NAVIGATING \u2192 ${preset.label.toUpperCase()}`);
 }
 
 // Controls
@@ -216,7 +222,7 @@ document.addEventListener('keydown', (e) => {
     }
     case '/':
       e.preventDefault();
-      (window as any).__searchInput?.focus();
+      (window as { __searchInput?: HTMLInputElement }).__searchInput?.focus();
       break;
     case 'Escape':
       detailPanel.hide();
@@ -290,7 +296,7 @@ function handleSearch(query: string) {
 setInterval(() => {
   const age = Date.now() - flightTracker.lastUpdateTime;
   hud.updateDataAge(age);
-}, 1000);
+}, DATA_AGE_UPDATE_INTERVAL);
 
 // Start all systems
 async function boot() {
@@ -303,32 +309,42 @@ async function boot() {
   });
 
   // Load Google 3D Tiles (default view)
-  await initGoogle3DTiles(viewer);
-  controls.setTileMode(true);
+  try {
+    await initGoogle3DTiles(viewer);
+    controls.setTileMode(true);
+  } catch (e) {
+    console.warn('[WORLDVIEW] Google 3D Tiles failed:', e);
+    controls.showToast('3D TILES UNAVAILABLE', 'error');
+  }
 
   // Start traffic particle system
   trafficParticles.start();
 
-  // Start data feeds (parallel)
+  // Start data feeds (parallel) — each wrapped in error boundary
   const results = await Promise.allSettled([
-    flightTracker.start(),
-    satRenderer.start(),
-    earthquakeLayer.load(),
+    flightTracker.start().catch((e: Error) => {
+      console.warn('[WORLDVIEW] Flights failed:', e);
+      controls.showToast('FLIGHT DATA UNAVAILABLE', 'error');
+    }),
+    satRenderer.start().catch((e: Error) => {
+      console.warn('[WORLDVIEW] Satellites failed:', e);
+      controls.showToast('SATELLITE DATA UNAVAILABLE', 'error');
+    }),
+    earthquakeLayer.load().catch((e: Error) => {
+      console.warn('[WORLDVIEW] Earthquakes failed:', e);
+      controls.showToast('EARTHQUAKE DATA UNAVAILABLE', 'error');
+    }),
   ]);
 
   const names = ['Flights', 'Satellites', 'Earthquakes'];
-  const debugLines: string[] = [];
   results.forEach((r, i) => {
     if (r.status === 'fulfilled') {
-      console.log(`[WORLDVIEW] ${names[i]} ✓`);
-      debugLines.push(`${names[i]}: ✓`);
+      console.log(`[WORLDVIEW] ${names[i]} \u2713`);
     } else {
       console.warn(`[WORLDVIEW] ${names[i]} failed:`, r.reason);
-      debugLines.push(`${names[i]}: ✗ ${r.reason}`);
+      controls.showToast(`${names[i].toUpperCase()} SYSTEM FAILED`, 'error');
     }
   });
-  debugLines.push(`Flight count: ${flightTracker.flightCount}`);
-  debugLines.push(`Military: ${flightTracker.militaryCount}`);
 
   // Update earthquake count
   hud.updateQuakeCount(earthquakeLayer.quakeCount);

@@ -1,7 +1,12 @@
 // GLSL Fragment Shaders for post-processing filters
+// All shaders now accept uniform parameters for real-time control
 
 export const nightVisionFS = `
 uniform sampler2D colorTexture;
+uniform float u_intensity;
+uniform float u_noise;
+uniform float u_bloom;
+uniform float u_vignette;
 in vec2 v_textureCoordinates;
 
 float random(vec2 st) {
@@ -12,20 +17,24 @@ void main() {
   vec4 color = texture(colorTexture, v_textureCoordinates);
   float luminance = dot(color.rgb, vec3(0.299, 0.587, 0.114));
 
-  // Green phosphor
-  vec3 green = vec3(0.1, luminance * 1.5, 0.1);
+  // Green phosphor — intensity controls green strength
+  float greenMul = 1.0 + u_intensity * 0.5;
+  vec3 green = vec3(0.1 * u_intensity, luminance * greenMul, 0.1 * u_intensity);
 
   // Noise
-  float noise = random(v_textureCoordinates + vec2(czm_frameNumber * 0.001)) * 0.08;
+  float noiseAmt = u_noise * 0.15;
+  float noise = random(v_textureCoordinates + vec2(czm_frameNumber * 0.001)) * noiseAmt;
   green += noise;
 
   // Vignette
   vec2 center = v_textureCoordinates - 0.5;
-  float vignette = 1.0 - dot(center, center) * 1.5;
+  float vignetteStr = u_vignette * 3.0;
+  float vignette = 1.0 - dot(center, center) * vignetteStr;
   green *= vignette;
 
-  // Slight bloom on bright areas
-  green += max(luminance - 0.5, 0.0) * vec3(0.0, 0.3, 0.0);
+  // Bloom on bright areas
+  float bloomStr = u_bloom * 0.6;
+  green += max(luminance - 0.5, 0.0) * vec3(0.0, bloomStr, 0.0);
 
   out_FragColor = vec4(green, 1.0);
 }
@@ -33,10 +42,12 @@ void main() {
 
 export const flirFS = `
 uniform sampler2D colorTexture;
+uniform float u_sensitivity;
+uniform float u_palette;
+uniform float u_pixelation;
 in vec2 v_textureCoordinates;
 
-vec3 thermalPalette(float t) {
-  // Black -> Blue -> Purple -> Red -> Orange -> Yellow -> White
+vec3 classicPalette(float t) {
   if (t < 0.15) return mix(vec3(0.0, 0.0, 0.1), vec3(0.1, 0.0, 0.4), t / 0.15);
   if (t < 0.3) return mix(vec3(0.1, 0.0, 0.4), vec3(0.5, 0.0, 0.5), (t - 0.15) / 0.15);
   if (t < 0.5) return mix(vec3(0.5, 0.0, 0.5), vec3(0.8, 0.1, 0.1), (t - 0.3) / 0.2);
@@ -45,13 +56,46 @@ vec3 thermalPalette(float t) {
   return mix(vec3(1.0, 1.0, 0.0), vec3(1.0, 1.0, 1.0), (t - 0.85) / 0.15);
 }
 
+vec3 whiteHotPalette(float t) {
+  return vec3(t);
+}
+
+vec3 blackHotPalette(float t) {
+  return vec3(1.0 - t);
+}
+
+vec3 rainbowPalette(float t) {
+  vec3 a = vec3(0.5);
+  vec3 b = vec3(0.5);
+  vec3 c = vec3(1.0);
+  vec3 d = vec3(0.0, 0.33, 0.67);
+  return a + b * cos(6.28318 * (c * t + d));
+}
+
 void main() {
-  vec4 color = texture(colorTexture, v_textureCoordinates);
+  vec2 uv = v_textureCoordinates;
+
+  // Pixelation
+  if (u_pixelation > 0.5) {
+    vec2 dims = czm_viewport.zw;
+    float blockSize = u_pixelation;
+    vec2 blocks = dims / blockSize;
+    uv = floor(uv * blocks) / blocks;
+  }
+
+  vec4 color = texture(colorTexture, uv);
   float luminance = dot(color.rgb, vec3(0.299, 0.587, 0.114));
 
-  // Invert for FLIR white-hot
-  float thermal = luminance;
-  vec3 result = thermalPalette(thermal);
+  // Sensitivity adjusts contrast mapping
+  float thermal = clamp((luminance - 0.5) * (1.0 + u_sensitivity * 2.0) + 0.5, 0.0, 1.0);
+
+  // Palette selection
+  vec3 result;
+  int pal = int(u_palette);
+  if (pal == 1) result = whiteHotPalette(thermal);
+  else if (pal == 2) result = blackHotPalette(thermal);
+  else if (pal == 3) result = rainbowPalette(thermal);
+  else result = classicPalette(thermal);
 
   // Slight noise for realism
   float noise = fract(sin(dot(v_textureCoordinates * 500.0 + czm_frameNumber * 0.01, vec2(12.9898, 78.233))) * 43758.5453) * 0.03;
@@ -68,6 +112,10 @@ void main() {
 
 export const crtFS = `
 uniform sampler2D colorTexture;
+uniform float u_scanlines;
+uniform float u_aberration;
+uniform float u_curvature;
+uniform float u_flicker;
 in vec2 v_textureCoordinates;
 
 void main() {
@@ -76,21 +124,24 @@ void main() {
   // Barrel distortion
   vec2 center = uv - 0.5;
   float dist = dot(center, center);
-  uv = uv + center * dist * 0.1;
+  float curveMul = u_curvature * 0.2;
+  uv = uv + center * dist * curveMul;
 
   // Chromatic aberration
-  float offset = 0.002;
+  float offset = u_aberration * 0.004;
   float r = texture(colorTexture, uv + vec2(offset, 0.0)).r;
   float g = texture(colorTexture, uv).g;
   float b = texture(colorTexture, uv - vec2(offset, 0.0)).b;
   vec3 color = vec3(r, g, b);
 
   // Scanlines
-  float scanline = sin(uv.y * 800.0) * 0.08;
+  float scanStr = u_scanlines * 0.15;
+  float scanline = sin(uv.y * 800.0) * scanStr;
   color -= scanline;
 
   // Horizontal line flicker
-  float flicker = sin(czm_frameNumber * 0.05 + uv.y * 20.0) * 0.02;
+  float flickerStr = u_flicker * 0.04;
+  float flicker = sin(czm_frameNumber * 0.05 + uv.y * 20.0) * flickerStr;
   color += flicker;
 
   // Vignette (stronger for CRT)
@@ -109,6 +160,9 @@ void main() {
 
 export const enhancedFS = `
 uniform sampler2D colorTexture;
+uniform float u_edgeStrength;
+uniform float u_contrast;
+uniform float u_saturation;
 in vec2 v_textureCoordinates;
 
 void main() {
@@ -129,15 +183,18 @@ void main() {
   vec4 gy = -tl - 2.0*t - tr + bl + 2.0*b + br;
   float edge = length(gx.rgb) + length(gy.rgb);
 
-  // High contrast base
+  // Contrast boost
+  float contrastMul = 1.0 + u_contrast * 0.6;
   float luminance = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-  vec3 enhanced = color.rgb * 1.3;
+  vec3 enhanced = color.rgb * contrastMul;
 
-  // Add edge overlay in cyan
-  enhanced += vec3(0.0, edge * 0.4, edge * 0.5);
+  // Add edge overlay in cyan, scaled by edgeStrength
+  float edgeMul = u_edgeStrength;
+  enhanced += vec3(0.0, edge * 0.4 * edgeMul, edge * 0.5 * edgeMul);
 
-  // Desaturate slightly
-  enhanced = mix(enhanced, vec3(luminance * 1.3), 0.2);
+  // Saturation control — mix between luminance (gray) and color
+  float satMix = 1.0 - u_saturation;
+  enhanced = mix(enhanced, vec3(luminance * contrastMul), satMix * 0.4);
 
   // Vignette
   vec2 center = v_textureCoordinates - 0.5;

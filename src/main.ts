@@ -78,6 +78,7 @@ const controls = new Controls({
   onFilterChange: (mode: FilterMode) => {
     filterManager.setFilter(mode);
     controls.setActiveFilter(mode);
+    effectsPanel.setFilter(mode);
   },
   onToggleFlights: () => {
     flightTracker.toggle();
@@ -127,6 +128,7 @@ handler.setInputAction((click: { position: Cesium.Cartesian2 }) => {
     if (flightTracker.handlePick(picked)) return;
     if (satRenderer.handlePick(picked)) return;
     if (earthquakeLayer.handlePick(picked)) return;
+    if (cctvLayer.handlePick(picked)) return;
   }
   // Clicked empty space — deselect
   detailPanel.hide();
@@ -143,22 +145,32 @@ document.addEventListener('keydown', (e) => {
     case '1':
       filterManager.setByIndex(0);
       controls.setActiveFilter('normal');
+      effectsPanel.setFilter('normal');
       break;
     case '2':
       filterManager.setByIndex(1);
       controls.setActiveFilter('nightvision');
+      effectsPanel.setFilter('nightvision');
       break;
     case '3':
       filterManager.setByIndex(2);
       controls.setActiveFilter('flir');
+      effectsPanel.setFilter('flir');
       break;
     case '4':
       filterManager.setByIndex(3);
       controls.setActiveFilter('crt');
+      effectsPanel.setFilter('crt');
       break;
     case '5':
       filterManager.setByIndex(4);
       controls.setActiveFilter('enhanced');
+      effectsPanel.setFilter('enhanced');
+      break;
+    case 'c':
+    case 'C':
+      cctvLayer.toggle();
+      controls.setLayerState('cctv', cctvLayer.visible);
       break;
     case 'f':
     case 'F':
@@ -210,6 +222,7 @@ document.addEventListener('keydown', (e) => {
       detailPanel.hide();
       flightTracker.selectByIcao(null);
       satRenderer.selectByNoradId(null);
+      cctvLayer.closeFeedPanel();
       break;
   }
 });

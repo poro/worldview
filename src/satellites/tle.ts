@@ -5,12 +5,20 @@ export interface TLERecord {
   category: string;
 }
 
-const TLE_URLS: Record<string, string> = {
+const isDev = import.meta.env.DEV;
+
+const TLE_URLS: Record<string, string> = isDev ? {
   stations: '/celestrak/NORAD/elements/gp.php?GROUP=stations&FORMAT=tle',
   starlink: '/celestrak/NORAD/elements/gp.php?GROUP=starlink&FORMAT=tle',
   military: '/celestrak/NORAD/elements/gp.php?GROUP=military&FORMAT=tle',
   weather: '/celestrak/NORAD/elements/gp.php?GROUP=weather&FORMAT=tle',
   gps: '/celestrak/NORAD/elements/gp.php?GROUP=gps-ops&FORMAT=tle',
+} : {
+  stations: '/api/celestrak?GROUP=stations&FORMAT=tle',
+  starlink: '/api/celestrak?GROUP=starlink&FORMAT=tle',
+  military: '/api/celestrak?GROUP=military&FORMAT=tle',
+  weather: '/api/celestrak?GROUP=weather&FORMAT=tle',
+  gps: '/api/celestrak?GROUP=gps-ops&FORMAT=tle',
 };
 
 export async function fetchTLEs(category: string): Promise<TLERecord[]> {

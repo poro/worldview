@@ -1,13 +1,13 @@
 import './style.css';
 import * as Cesium from 'cesium';
-import { createViewer, flyToLocation } from './globe/viewer';
+import { createViewer, flyToLocation, flyToCinematic, initGoogle3DTiles, toggleGoogle3D } from './globe/viewer';
 import { FlightTracker } from './flights/tracker';
 import { SatelliteRenderer } from './satellites/renderer';
 import { FilterManager, FilterMode } from './filters/manager';
 import { EarthquakeLayer } from './osint/earthquakes';
 import { HUD } from './ui/hud';
 import { DetailPanel } from './ui/panel';
-import { Controls } from './ui/controls';
+import { Controls, LOCATION_PRESETS, LocationPreset } from './ui/controls';
 
 // Boot sequence
 console.log(
@@ -52,6 +52,12 @@ detailPanel.setOnClose(() => {
   satRenderer.selectByNoradId(null);
 });
 
+// Navigate to location preset
+function navigateToPreset(preset: LocationPreset) {
+  flyToCinematic(viewer, preset.lon, preset.lat, preset.alt, 2);
+  controls.showToast(`NAVIGATING → ${preset.label.toUpperCase()}`);
+}
+
 // Controls
 const controls = new Controls({
   onFilterChange: (mode: FilterMode) => {
@@ -75,6 +81,14 @@ const controls = new Controls({
   },
   onSearch: (query: string) => {
     handleSearch(query);
+  },
+  onLocationSelect: (preset: LocationPreset) => {
+    navigateToPreset(preset);
+  },
+  onToggle3D: () => {
+    const enabled = toggleGoogle3D(viewer);
+    controls.setTileMode(enabled);
+    controls.showToast(enabled ? 'GOOGLE 3D TILES' : 'STANDARD VIEW');
   },
 });
 
@@ -129,8 +143,8 @@ document.addEventListener('keydown', (e) => {
       satRenderer.toggle();
       controls.setLayerState('satellites', satRenderer.visible);
       break;
-    case 'q':
-    case 'Q':
+    case 'g':
+    case 'G':
       earthquakeLayer.toggle();
       controls.setLayerState('earthquakes', earthquakeLayer.visible);
       break;
@@ -138,6 +152,19 @@ document.addEventListener('keydown', (e) => {
     case 'H':
       hud.toggle();
       break;
+    // Location presets
+    case 'q': case 'Q':
+    case 'w': case 'W':
+    case 'e': case 'E':
+    case 'r': case 'R':
+    case 't': case 'T':
+    case 'y': case 'Y':
+    case 'u': case 'U':
+    case 'i': case 'I': {
+      const preset = LOCATION_PRESETS.find((p) => p.key === e.key.toUpperCase());
+      if (preset) navigateToPreset(preset);
+      break;
+    }
     case '/':
       e.preventDefault();
       (window as any).__searchInput?.focus();
@@ -224,6 +251,10 @@ async function boot() {
     destination: Cesium.Cartesian3.fromDegrees(-40, 30, 20000000),
     duration: 0,
   });
+
+  // Load Google 3D Tiles (default view)
+  await initGoogle3DTiles(viewer);
+  controls.setTileMode(true);
 
   // Start data feeds (parallel)
   const results = await Promise.allSettled([

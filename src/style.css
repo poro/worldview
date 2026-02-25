@@ -112,3 +112,10 @@
   background: #00ff88;
   box-shadow: 0 0 6px rgba(0, 255, 136, 0.5);
 }
+
+/* Location nav buttons */
+.loc-btn:active {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: rgba(0, 229, 255, 0.5);
+  color: #00e5ff;
+}

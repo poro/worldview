@@ -2,7 +2,7 @@ import * as Cesium from 'cesium';
 
 export function createViewer(): Cesium.Viewer {
   // Placeholder token — replace with real Cesium Ion token
-  Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder';
+  Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI3YjliNzI2NS1mYmFjLTRjYTUtYTc5Ny01NjRlNGU3NzA1YWYiLCJpZCI6Mzk0MDk5LCJpYXQiOjE3NzIwMDYzODZ9.ouPT_EQ7AnbLJ7ub5m5culWUOolidQmarMGVYNVdO6Y';
 
   const viewer = new Cesium.Viewer('cesiumContainer', {
     baseLayerPicker: false,

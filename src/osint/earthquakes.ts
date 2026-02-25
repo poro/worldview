@@ -41,11 +41,7 @@ export class EarthquakeLayer {
 
   async load() {
     try {
-      const isDev = import.meta.env.DEV;
-      const url = isDev
-        ? '/usgs/earthquakes/feed/v1.0/summary/significant_month.geojson'
-        : '/api/usgs';
-      const res = await fetch(url);
+      const res = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_month.geojson');
       if (!res.ok) throw new Error(`USGS error: ${res.status}`);
       const data = await res.json();
 

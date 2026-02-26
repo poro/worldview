@@ -29,6 +29,7 @@ export interface ControlCallbacks {
   onToggleMilitary: () => void;
   onToggleCCTV: () => void;
   onToggleHUD: () => void;
+  onToggleViewScout: () => void;
   onSearch: (query: string) => void;
   onLocationSelect: (preset: LocationPreset) => void;
   onToggle3D: () => void;
@@ -111,6 +112,7 @@ export class Controls {
       { id: 'earthquakes', label: 'QUAKES', icon: '\u25CE', key: 'G', active: true },
       { id: 'traffic', label: 'TRAFFIC', icon: '\u25CF', key: 'T', active: true },
       { id: 'cctv', label: 'CCTV', icon: '\u25CE', key: 'C', active: true },
+      { id: 'viewscout', label: 'VIEWSCOUT', icon: '⊕', key: 'V', active: false },
     ];
 
     const panel = document.createElement('div');
@@ -140,6 +142,7 @@ export class Controls {
         else if (l.id === 'earthquakes') this.callbacks.onToggleEarthquakes();
         else if (l.id === 'traffic') this.callbacks.onToggleTraffic();
         else if (l.id === 'cctv') this.callbacks.onToggleCCTV();
+        else if (l.id === 'viewscout') this.callbacks.onToggleViewScout();
       });
     });
   }

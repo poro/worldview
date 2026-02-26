@@ -11,6 +11,7 @@ import { Controls, LOCATION_PRESETS, LocationPreset } from './ui/controls';
 import { TrafficParticles } from './traffic/particles';
 import { CCTVLayer } from './cctv/feeds';
 import { EffectsPanel } from './ui/effects';
+import { ViewScoutPanel } from './viewscout';
 import { DATA_AGE_UPDATE_INTERVAL } from './config';
 
 // Boot sequence
@@ -33,6 +34,12 @@ const cctvLayer = new CCTVLayer(viewer);
 const hud = new HUD(viewer);
 const detailPanel = new DetailPanel();
 const effectsPanel = new EffectsPanel();
+const viewScoutPanel = new ViewScoutPanel(viewer, {
+  onToggle: (active) => {
+    controls.setLayerState('viewscout', active);
+    if (active) controls.showToast('VIEWSCOUT ACTIVE — CLICK GLOBE TO ANALYZE');
+  },
+});
 
 // Wire up callbacks
 flightTracker.setOnCountUpdate((count) => hud.updateFlightCount(count));
@@ -118,6 +125,9 @@ const controls = new Controls({
   },
   onLocationSelect: (preset: LocationPreset) => {
     navigateToPreset(preset);
+  },
+  onToggleViewScout: () => {
+    viewScoutPanel.toggle();
   },
   onToggle3D: () => {
     const enabled = toggleGoogle3D(viewer);
@@ -206,6 +216,10 @@ document.addEventListener('keydown', (e) => {
     case 'h':
     case 'H':
       hud.toggle();
+      break;
+    case 'v':
+    case 'V':
+      viewScoutPanel.toggle();
       break;
     // Location presets
     case 'q': case 'Q':

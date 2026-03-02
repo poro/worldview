@@ -196,10 +196,23 @@ export class Timeline {
       }
     });
 
-    // Scrubber mouse events
+    // Scrubber mouse + touch events
     this.scrubber!.addEventListener('mousedown', (e) => this.onScrubberMouseDown(e));
     document.addEventListener('mousemove', (e) => this.onScrubberMouseMove(e));
     document.addEventListener('mouseup', () => this.onScrubberMouseUp());
+
+    // Touch support (Mac trackpad + mobile)
+    this.scrubber!.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      this.onScrubberMouseDown({ clientX: touch.clientX, target: e.target } as MouseEvent);
+    }, { passive: false });
+    document.addEventListener('touchmove', (e) => {
+      if (!this.isDragging) return;
+      const touch = e.touches[0];
+      this.onScrubberMouseMove({ clientX: touch.clientX } as MouseEvent);
+    });
+    document.addEventListener('touchend', () => this.onScrubberMouseUp());
 
     // Subscribe to time controller changes
     this.unsubscribeTime = this.timeController.subscribe((state) => {

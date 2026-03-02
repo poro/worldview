@@ -191,18 +191,27 @@
 
 .timeline-scrubber {
   position: relative;
-  height: 32px;
+  height: 48px;
   cursor: pointer;
   user-select: none;
+  pointer-events: auto !important;
+  touch-action: none;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  border: 1px solid rgba(0, 255, 136, 0.1);
+}
+.timeline-scrubber:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(0, 255, 136, 0.25);
 }
 
 /* Background track */
 .timeline-track {
   position: absolute;
-  top: 12px;
+  top: 16px;
   left: 0;
   right: 0;
-  height: 8px;
+  height: 16px;
   background: rgba(26, 26, 46, 0.8);
   border: 1px solid rgba(0, 255, 136, 0.1);
   border-radius: 4px;
@@ -223,25 +232,25 @@
 /* Playhead */
 .timeline-playhead {
   position: absolute;
-  top: 6px;
-  width: 3px;
-  height: 20px;
+  top: 4px;
+  width: 4px;
+  height: 40px;
   background: #00ff88;
   border-radius: 2px;
   box-shadow: 0 0 8px rgba(0, 255, 136, 0.6), 0 0 16px rgba(0, 255, 136, 0.3);
   cursor: ew-resize;
   z-index: 3;
-  transform: translateX(-1px);
+  transform: translateX(-2px);
   transition: left 0.05s linear;
 }
 
 .timeline-playhead::before {
   content: '';
   position: absolute;
-  top: -4px;
-  left: -5px;
-  width: 13px;
-  height: 28px;
+  top: -8px;
+  left: -10px;
+  width: 24px;
+  height: 56px;
   /* Larger hit area for dragging */
 }
 

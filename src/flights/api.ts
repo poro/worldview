@@ -79,24 +79,13 @@ export async function fetchFlights(bounds?: {
   const isDev = import.meta.env.DEV;
 
   if (isDev) {
-    // Fetch multiple regions around the Middle East theater + nearby traffic hubs
-    const devRegions = [
-      { lat: 25, lon: 55 },   // UAE/Dubai (dense traffic)
-      { lat: 29, lon: 48 },   // Kuwait/Bahrain/Qatar
-      { lat: 21, lon: 57 },   // Oman/Strait of Hormuz
-      { lat: 24, lon: 45 },   // Saudi Arabia
-      { lat: 33, lon: 44 },   // Iraq/Baghdad
-      { lat: 37, lon: 35 },   // Turkey
-      { lat: 32, lon: 53 },   // Iran (will be 0 if airspace closed)
-      { lat: 30, lon: 35 },   // Jordan/Israel
-    ];
-    
+    // Use same global regions as production but via vite proxy
     const allAircraft: any[] = [];
     const seen = new Set<string>();
     let now = Date.now() / 1000;
     
     const results = await Promise.allSettled(
-      devRegions.map(async (r) => {
+      GLOBAL_REGIONS.map(async (r) => {
         const url = `/adsbfi/api/v2/lat/${r.lat}/lon/${r.lon}/dist/250`;
         const resp = await fetch(url);
         if (!resp.ok) return null;
@@ -118,7 +107,7 @@ export async function fetchFlights(bounds?: {
       }
     }
     
-    console.log(`[WORLDVIEW] Dev flights: ${allAircraft.length} from ${devRegions.length} regions`);
+    console.log(`[WORLDVIEW] Dev flights: ${allAircraft.length} from ${GLOBAL_REGIONS.length} global regions`);
     return adsbfiToOpenSky({ now, aircraft: allAircraft });
   }
 

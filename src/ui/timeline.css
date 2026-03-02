@@ -1,0 +1,434 @@
+/* ============================================
+   Timeline / Replay System Styles
+   Dark command-center theme matching WorldView
+   ============================================ */
+
+/* Timeline container — full-width bar at bottom */
+.timeline-container {
+  position: absolute;
+  bottom: 48px;
+  left: 16px;
+  right: 16px;
+  z-index: 50;
+  pointer-events: auto;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.timeline-container.hidden {
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+}
+
+/* Main timeline panel */
+.timeline-panel {
+  background: rgba(10, 10, 15, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 255, 136, 0.15);
+  border-radius: 4px;
+  padding: 8px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Top row: controls + time display */
+.timeline-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+}
+
+/* Play/pause button */
+.timeline-btn {
+  background: transparent;
+  border: 1px solid rgba(0, 255, 136, 0.25);
+  border-radius: 3px;
+  color: #00ff88;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.timeline-btn:hover {
+  border-color: rgba(0, 255, 136, 0.5);
+  background: rgba(0, 255, 136, 0.1);
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.2);
+}
+
+.timeline-btn:active {
+  background: rgba(0, 255, 136, 0.2);
+}
+
+.timeline-btn-play {
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+}
+
+/* Speed button */
+.timeline-btn-speed {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.05em;
+  color: #00e5ff;
+  border-color: rgba(0, 229, 255, 0.25);
+}
+
+.timeline-btn-speed:hover {
+  border-color: rgba(0, 229, 255, 0.5);
+  background: rgba(0, 229, 255, 0.1);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
+}
+
+/* LIVE button */
+.timeline-btn-live {
+  height: 22px;
+  padding: 0 10px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.15em;
+  font-weight: 600;
+}
+
+.timeline-btn-live.active {
+  background: rgba(0, 255, 136, 0.2);
+  border-color: rgba(0, 255, 136, 0.6);
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.3);
+  color: #00ff88;
+  text-shadow: 0 0 6px rgba(0, 255, 136, 0.6);
+}
+
+.timeline-btn-live:not(.active) {
+  color: #888;
+  border-color: rgba(136, 136, 136, 0.25);
+}
+
+/* Time display */
+.timeline-time-display {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #00ff88;
+  text-shadow: 0 0 6px rgba(0, 255, 136, 0.4);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  min-width: 180px;
+  text-align: center;
+}
+
+.timeline-time-display.replay {
+  color: #ffb300;
+  text-shadow: 0 0 6px rgba(255, 179, 0, 0.4);
+}
+
+/* Date picker input */
+.timeline-date-input {
+  background: rgba(20, 20, 30, 0.8);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  border-radius: 3px;
+  color: #00e5ff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 2px 6px;
+  height: 22px;
+  outline: none;
+  cursor: pointer;
+  width: 140px;
+}
+
+.timeline-date-input:focus {
+  border-color: rgba(0, 229, 255, 0.5);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
+}
+
+.timeline-date-input::-webkit-calendar-picker-indicator {
+  filter: invert(0.7) sepia(1) saturate(3) hue-rotate(150deg);
+  cursor: pointer;
+}
+
+/* Mode indicator */
+.timeline-mode-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+.timeline-mode-badge.live {
+  background: rgba(0, 255, 136, 0.15);
+  color: #00ff88;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.timeline-mode-badge.replay {
+  background: rgba(255, 179, 0, 0.15);
+  color: #ffb300;
+  border: 1px solid rgba(255, 179, 0, 0.3);
+  animation: replay-pulse 2s ease-in-out infinite;
+}
+
+@keyframes replay-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Spacer */
+.timeline-spacer {
+  flex: 1;
+}
+
+/* ============================================
+   Scrubber Track
+   ============================================ */
+
+.timeline-scrubber {
+  position: relative;
+  height: 32px;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Background track */
+.timeline-track {
+  position: absolute;
+  top: 12px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: rgba(26, 26, 46, 0.8);
+  border: 1px solid rgba(0, 255, 136, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* Filled portion (elapsed time) */
+.timeline-track-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(0, 255, 136, 0.3), rgba(0, 229, 255, 0.2));
+  border-radius: 4px;
+  transition: width 0.05s linear;
+}
+
+/* Playhead */
+.timeline-playhead {
+  position: absolute;
+  top: 6px;
+  width: 3px;
+  height: 20px;
+  background: #00ff88;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.6), 0 0 16px rgba(0, 255, 136, 0.3);
+  cursor: ew-resize;
+  z-index: 3;
+  transform: translateX(-1px);
+  transition: left 0.05s linear;
+}
+
+.timeline-playhead::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -5px;
+  width: 13px;
+  height: 28px;
+  /* Larger hit area for dragging */
+}
+
+.timeline-playhead.dragging {
+  transition: none;
+  background: #fff;
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.8), 0 0 24px rgba(0, 255, 136, 0.4);
+}
+
+/* Time labels on track */
+.timeline-labels {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.timeline-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: rgba(150, 150, 170, 0.5);
+  letter-spacing: 0.05em;
+}
+
+/* Tick marks */
+.timeline-ticks {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  right: 0;
+  height: 12px;
+  pointer-events: none;
+}
+
+.timeline-tick {
+  position: absolute;
+  width: 1px;
+  background: rgba(0, 255, 136, 0.1);
+}
+
+.timeline-tick.major {
+  height: 12px;
+  top: 0;
+  background: rgba(0, 255, 136, 0.2);
+}
+
+.timeline-tick.minor {
+  height: 6px;
+  top: 3px;
+  background: rgba(0, 255, 136, 0.08);
+}
+
+/* ============================================
+   Event Markers on Timeline
+   ============================================ */
+
+.timeline-event-marker {
+  position: absolute;
+  top: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 2;
+  transform: translateX(-4px);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.timeline-event-marker:hover {
+  transform: translateX(-4px) scale(1.5);
+  z-index: 5;
+}
+
+.timeline-event-marker.strike {
+  background: #ff3d3d;
+  box-shadow: 0 0 6px rgba(255, 61, 61, 0.6);
+}
+.timeline-event-marker.strike:hover {
+  box-shadow: 0 0 12px rgba(255, 61, 61, 0.8);
+}
+
+.timeline-event-marker.diplomatic {
+  background: #4dabf7;
+  box-shadow: 0 0 6px rgba(77, 171, 247, 0.6);
+}
+.timeline-event-marker.diplomatic:hover {
+  box-shadow: 0 0 12px rgba(77, 171, 247, 0.8);
+}
+
+.timeline-event-marker.military_movement {
+  background: #ffb300;
+  box-shadow: 0 0 6px rgba(255, 179, 0, 0.6);
+}
+.timeline-event-marker.military_movement:hover {
+  box-shadow: 0 0 12px rgba(255, 179, 0, 0.8);
+}
+
+.timeline-event-marker.incident {
+  background: #ffff00;
+  box-shadow: 0 0 6px rgba(255, 255, 0, 0.6);
+}
+.timeline-event-marker.incident:hover {
+  box-shadow: 0 0 12px rgba(255, 255, 0, 0.8);
+}
+
+/* Event tooltip */
+.timeline-event-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  background: rgba(10, 10, 15, 0.95);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 3px;
+  padding: 6px 10px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 10;
+}
+
+.timeline-event-marker:hover .timeline-event-tooltip {
+  opacity: 1;
+}
+
+.timeline-event-tooltip-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #e0e0e0;
+  letter-spacing: 0.05em;
+}
+
+.timeline-event-tooltip-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: rgba(150, 150, 170, 0.6);
+  margin-top: 2px;
+}
+
+/* ============================================
+   Keyboard hint (bottom-right extension)
+   ============================================ */
+
+.timeline-keyhint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: rgba(100, 100, 120, 0.5);
+  text-align: right;
+  padding-top: 2px;
+  letter-spacing: 0.05em;
+}
+
+.timeline-keyhint kbd {
+  background: rgba(26, 26, 46, 0.6);
+  border: 1px solid rgba(100, 100, 120, 0.2);
+  border-radius: 2px;
+  padding: 0 3px;
+  margin: 0 1px;
+  font-size: 8px;
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
+
+@media (max-width: 800px) {
+  .timeline-container {
+    left: 8px;
+    right: 8px;
+    bottom: 40px;
+  }
+
+  .timeline-date-input {
+    display: none;
+  }
+
+  .timeline-time-display {
+    font-size: 10px;
+    min-width: 140px;
+  }
+
+  .timeline-keyhint {
+    display: none;
+  }
+}

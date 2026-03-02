@@ -31,7 +31,7 @@ import {
 } from '../config';
 
 // Commercial: solid filled light blue airplane (larger)
-const COMMERCIAL_SVG = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><path d="M12 2L8 10H2L4 13H8L10 22H14L12 13H20L22 10H16L12 2Z" fill="#4dabf7" stroke="#2b7ab5" stroke-width="0.5"/></svg>`)}`;
+const COMMERCIAL_SVG = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><path d="M12 2L8 10H2L4 13H8L10 22H14L12 13H20L22 10H16L12 2Z" fill="#ffffff" stroke="#888888" stroke-width="0.8"/></svg>`)}`;
 
 // Flagged/squawk: solid red airplane
 const FLAGGED_SVG = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"><path d="M12 2L8 10H2L4 13H8L10 22H14L12 13H20L22 10H16L12 2Z" fill="#ff4500" stroke="#cc2200" stroke-width="0.5"/></svg>`)}`;

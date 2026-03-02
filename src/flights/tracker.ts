@@ -146,7 +146,7 @@ export class FlightTracker {
         entity.show = this._visible;
         const flight = this.flights.get(icao);
         if (flight) {
-          const alt = flight.baroAltitude || flight.geoAltitude || 10000;
+          const _alt = flight.baroAltitude || flight.geoAltitude || 10000;
           if (isMil) {
             if (entity.billboard) {
               const cls = this.militaryClassifications.get(icao);

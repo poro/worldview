@@ -238,24 +238,9 @@ export class SatelliteRenderer {
 
         this.entities.set(key, entity);
 
-        // Add footprint lines for imaging/military/ISR satellites (not starlink)
-        if (category === 'military' || (category === 'stations' && tle.name.includes('ISS'))) {
-          const footprintKey = `fp-${key}`;
-          if (!this.footprintEntities.has(footprintKey)) {
-            const fpEntity = this.viewer.entities.add({
-              polyline: {
-                positions: [
-                  Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, pos.alt * 1000),
-                  Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, 0),
-                ],
-                width: 1,
-                material: Cesium.Color.fromCssColorString('#00e5ff').withAlpha(0.15),
-              },
-              properties: { type: 'sat-footprint', noradId: pos.noradId },
-              show: this._visible,
-            });
-            this.footprintEntities.set(footprintKey, fpEntity);
-          }
+        // Add footprint fan lines for military/weather/ISR satellites
+        if (category === 'military' || category === 'weather' || (category === 'stations' && tle.name.includes('ISS'))) {
+          this.createFootprintFan(key, pos, category);
         }
       }
     } finally {
@@ -263,6 +248,46 @@ export class SatelliteRenderer {
     }
 
     this.onCountUpdate?.(this.entities.size);
+  }
+
+  /** Create fan of footprint lines from satellite to ground swath corners */
+  private createFootprintFan(key: string, pos: SatellitePosition, category: string) {
+    const fpBaseKey = `fp-${key}`;
+    if (this.footprintEntities.has(`${fpBaseKey}-0`)) return; // already created
+
+    const altM = pos.alt * 1000;
+    // Swath half-angle in degrees — approximate imaging swath from altitude
+    const swathDeg = Math.min(3.0, altM / 200000);
+    const lineColor = Cesium.Color.fromCssColorString('#00e5ff').withAlpha(0.12);
+    const fanAngles = [-2, -1, 0, 1, 2]; // 5 fan lines
+
+    for (let i = 0; i < fanAngles.length; i++) {
+      const offsetDeg = fanAngles[i] * swathDeg * 0.5;
+      const groundLon = pos.lon + offsetDeg / Math.cos(pos.lat * Math.PI / 180);
+      const groundLat = pos.lat + offsetDeg * 0.3; // slight lat offset too
+
+      const fpEntity = this.viewer.entities.add({
+        polyline: {
+          positions: [
+            Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, altM),
+            Cesium.Cartesian3.fromDegrees(groundLon, groundLat, 0),
+          ],
+          width: 1,
+          material: lineColor,
+        },
+        properties: { type: 'sat-footprint', noradId: pos.noradId, fanIndex: i },
+        show: this._visible,
+      });
+      this.footprintEntities.set(`${fpBaseKey}-${i}`, fpEntity);
+    }
+
+    // Add a name label for military sats above the globe
+    if (category === 'military') {
+      const entity = this.entities.get(key);
+      if (entity && !entity.label) {
+        // Label already handled in renderCategory for non-starlink
+      }
+    }
   }
 
   private removeCategoryEntities(category: string) {
@@ -280,11 +305,14 @@ export class SatelliteRenderer {
     }
     keysToRemove.forEach((k) => {
       this.entities.delete(k);
-      const fpKey = `fp-${k}`;
-      const fpEntity = this.footprintEntities.get(fpKey);
-      if (fpEntity) {
-        this.viewer.entities.remove(fpEntity);
-        this.footprintEntities.delete(fpKey);
+      // Remove all fan lines (0-4) for this entity
+      for (let i = 0; i < 5; i++) {
+        const fpKey = `fp-${k}-${i}`;
+        const fpEntity = this.footprintEntities.get(fpKey);
+        if (fpEntity) {
+          this.viewer.entities.remove(fpEntity);
+          this.footprintEntities.delete(fpKey);
+        }
       }
     });
     this.onCountUpdate?.(this.entities.size);
@@ -302,14 +330,22 @@ export class SatelliteRenderer {
         if (entity) {
           entity.position = Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, pos.alt * 1000) as unknown as Cesium.PositionProperty;
         }
-        // Update footprint line positions
-        const fpKey = `fp-${key}`;
-        const fpEntity = this.footprintEntities.get(fpKey);
-        if (fpEntity?.polyline) {
-          fpEntity.polyline.positions = new Cesium.ConstantProperty([
-            Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, pos.alt * 1000),
-            Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, 0),
-          ]);
+        // Update footprint fan line positions
+        const fpBaseKey = `fp-${key}`;
+        const altM = pos.alt * 1000;
+        const swathDeg = Math.min(3.0, altM / 200000);
+        const fanAngles = [-2, -1, 0, 1, 2];
+        for (let i = 0; i < fanAngles.length; i++) {
+          const fpEntity = this.footprintEntities.get(`${fpBaseKey}-${i}`);
+          if (fpEntity?.polyline) {
+            const offsetDeg = fanAngles[i] * swathDeg * 0.5;
+            const groundLon = pos.lon + offsetDeg / Math.cos(pos.lat * Math.PI / 180);
+            const groundLat = pos.lat + offsetDeg * 0.3;
+            fpEntity.polyline.positions = new Cesium.ConstantProperty([
+              Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, altM),
+              Cesium.Cartesian3.fromDegrees(groundLon, groundLat, 0),
+            ]);
+          }
         }
       }
     }

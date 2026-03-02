@@ -6,9 +6,9 @@
 
 export type TimeMode = 'LIVE' | 'REPLAY';
 
-export type PlaybackSpeed = 1 | 2 | 5 | 10 | 60;
+export type PlaybackSpeed = 1 | 3 | 5 | 15 | 60 | 3600;
 
-export const PLAYBACK_SPEEDS: PlaybackSpeed[] = [1, 2, 5, 10, 60];
+export const PLAYBACK_SPEEDS: PlaybackSpeed[] = [1, 3, 5, 15, 60, 3600];
 
 export interface TimeState {
   mode: TimeMode;

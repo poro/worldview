@@ -251,12 +251,11 @@
   z-index: 5;
   background: repeating-linear-gradient(
     0deg,
-    rgba(0, 0, 0, 0.03) 0px,
-    rgba(0, 0, 0, 0.03) 1px,
+    rgba(0, 0, 0, 0.02) 0px,
+    rgba(0, 0, 0, 0.02) 1px,
     transparent 1px,
     transparent 3px
   );
-  mix-blend-mode: multiply;
 }
 
 .vignette-overlay {
@@ -264,7 +263,7 @@
   top: 0; left: 0; right: 0; bottom: 0;
   pointer-events: none;
   z-index: 4;
-  background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.6) 100%);
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.5) 100%);
 }
 
 /* Zoom Controls */
@@ -495,3 +494,45 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.2; }
 }
+
+/* ============================
+   EVENT CARDS (HTML overlays)
+   ============================ */
+.event-card {
+  position: fixed;
+  pointer-events: none;
+  z-index: 150;
+  background: rgba(10, 10, 15, 0.92);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 4px;
+  padding: 8px 12px;
+  min-width: 200px;
+  max-width: 280px;
+  font-family: 'JetBrains Mono', monospace;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  transform: translateX(-50%);
+}
+.event-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.event-type-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+.event-type-badge.kinetic { background: rgba(255,61,61,0.2); color: #ff3d3d; }
+.event-type-badge.maritime { background: rgba(0,229,255,0.2); color: #00e5ff; }
+.event-type-badge.retaliation { background: rgba(255,179,0,0.2); color: #ffb300; }
+.event-type-badge.civilian-impact { background: rgba(255,140,0,0.2); color: #ff8c00; }
+.event-type-badge.infrastructure { background: rgba(255,102,0,0.2); color: #ff6600; }
+.event-type-badge.escalation { background: rgba(255,0,255,0.2); color: #ff00ff; }
+.event-time { font-size: 9px; color: #666; }
+.event-card-title { font-size: 11px; color: #e0e0e0; font-weight: 600; margin-bottom: 2px; }
+.event-card-desc { font-size: 9px; color: #888; line-height: 1.3; }
+.event-card-thumb { width: 100%; height: 80px; object-fit: cover; border-radius: 2px; margin-top: 6px; border: 1px solid rgba(255,255,255,0.1); }

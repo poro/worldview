@@ -25,6 +25,7 @@ import { SnapshotAPIAdapter, TimelineEvent } from './time/data-adapter';
 import { CountryLayer } from './layers/countries';
 import { InternetBlackoutLayer } from './layers/internet-blackout';
 import { EventCardLayer } from './layers/event-cards';
+import { HexBinLayer } from './layers/hex-bins';
 import { FilterBar } from './ui/filter-bar';
 import { ViewModeManager } from './ui/view-modes';
 import { RightPanel } from './ui/right-panel';
@@ -59,6 +60,7 @@ new ZoomControls(viewer);
 const countryLayer = new CountryLayer(viewer);
 const internetBlackoutLayer = new InternetBlackoutLayer(viewer);
 const eventCardLayer = new EventCardLayer(viewer);
+const hexBinLayer = new HexBinLayer(viewer);
 const viewModeManager = new ViewModeManager();
 
 // Time Controller + Timeline — wire to all data layers
@@ -73,6 +75,19 @@ const eventAdapter = new SnapshotAPIAdapter('events', recorderBaseUrl);
 // Timeline created here but wired to controls later (after controls init)
 let timeline: Timeline | null = null;
 const hud = new HUD(viewer);
+hud.setOnModeChange((mode) => {
+  if (mode === 'LIVE') {
+    timeController.goLive();
+  } else {
+    // Enter playback — start from 1 hour ago
+    const oneHourAgo = new Date(Date.now() - 3600000);
+    timeController.seekTo(oneHourAgo);
+  }
+});
+// Sync HUD mode when TimeController state changes
+timeController.subscribe((state) => {
+  hud.setMode(state.mode === 'LIVE' ? 'LIVE' : 'PLAYBACK');
+});
 const detailPanel = new DetailPanel();
 const effectsPanel = new EffectsPanel();
 const viewScoutPanel = new ViewScoutPanel(viewer, {
@@ -579,6 +594,11 @@ async function boot() {
     eventCardLayer.load();
     console.log('[WORLDVIEW] Event Cards ✓');
   } catch (e) { console.warn('[WORLDVIEW] Event Cards failed:', e); }
+
+  try {
+    hexBinLayer.load();
+    console.log('[WORLDVIEW] Hex Bins ✓');
+  } catch (e) { console.warn('[WORLDVIEW] Hex Bins failed:', e); }
 
   console.log('[WORLDVIEW] All systems online.');
 }

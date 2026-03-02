@@ -445,6 +445,67 @@
 }
 
 /* ============================================
+   Speed Preset Buttons
+   ============================================ */
+
+.timeline-speed-presets {
+  display: flex;
+  gap: 4px;
+  padding: 0 2px;
+}
+
+.tl-speed-preset {
+  background: transparent;
+  border: 1px solid rgba(0, 229, 255, 0.15);
+  border-radius: 2px;
+  color: #666;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tl-speed-preset:hover {
+  border-color: rgba(0, 229, 255, 0.4);
+  color: #00e5ff;
+  background: rgba(0, 229, 255, 0.08);
+}
+
+.tl-speed-preset.active {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: rgba(0, 229, 255, 0.5);
+  color: #00e5ff;
+  text-shadow: 0 0 4px rgba(0, 229, 255, 0.4);
+}
+
+/* ============================================
+   Event Pips (small red lines on track)
+   ============================================ */
+
+.timeline-event-pips {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  right: 0;
+  height: 20px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.timeline-event-pip {
+  position: absolute;
+  width: 2px;
+  height: 12px;
+  background: #ff3d3d;
+  opacity: 0.7;
+  transform: translateX(-1px);
+  border-radius: 1px;
+  box-shadow: 0 0 4px rgba(255, 61, 61, 0.4);
+}
+
+/* ============================================
    Keyboard hint (bottom-right extension)
    ============================================ */
 

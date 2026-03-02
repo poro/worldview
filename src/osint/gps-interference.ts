@@ -141,6 +141,28 @@ export class GpsInterferenceLayer {
           show: this._visible,
         });
         this.entities.set(zone.id, entity);
+
+        // Add concentric ring ellipses for enhanced gradient density look
+        const ringCount = 3;
+        for (let i = 1; i <= ringCount; i++) {
+          const ringRadius = fixedRadius * (i / (ringCount + 1));
+          const ringAlpha = 0.08 * (ringCount - i + 1);
+          const ringEntity = this.viewer.entities.add({
+            position: Cesium.Cartesian3.fromDegrees(zone.lon, zone.lat, 0),
+            ellipse: {
+              semiMajorAxis: ringRadius,
+              semiMinorAxis: ringRadius,
+              material: baseColor.withAlpha(ringAlpha),
+              outline: true,
+              outlineColor: baseColor.withAlpha(ringAlpha * 2),
+              outlineWidth: 1,
+              height: 0,
+            },
+            properties: { type: 'gps-ring', zoneId: zone.id },
+            show: this._visible,
+          });
+          this.entities.set(`${zone.id}-ring-${i}`, ringEntity);
+        }
       }
     } finally {
       this.viewer.entities.resumeEvents();

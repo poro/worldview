@@ -39,6 +39,8 @@ export class Timeline {
   private playhead: HTMLElement | null = null;
   private labelsRow: HTMLElement | null = null;
   private eventsLayer: HTMLElement | null = null;
+  private eventPipsLayer: HTMLElement | null = null;
+  private speedPresetsContainer: HTMLElement | null = null;
   private ticksLayer: HTMLElement | null = null;
 
   // State
@@ -120,12 +122,21 @@ export class Timeline {
           <input type="datetime-local" class="timeline-date-input" id="tl-date" title="Jump to date/time" />
           <button class="timeline-btn timeline-btn-live active" id="tl-live" title="Return to live">LIVE</button>
         </div>
+        <div class="timeline-speed-presets" id="tl-speed-presets">
+          <button class="tl-speed-preset active" data-speed="1">1x/s</button>
+          <button class="tl-speed-preset" data-speed="3">3x/s</button>
+          <button class="tl-speed-preset" data-speed="5">5x/s</button>
+          <button class="tl-speed-preset" data-speed="15">15x/s</button>
+          <button class="tl-speed-preset" data-speed="60">1m/s</button>
+          <button class="tl-speed-preset" data-speed="3600">1h/s</button>
+        </div>
         <div class="timeline-scrubber" id="tl-scrubber">
           <div class="timeline-ticks" id="tl-ticks"></div>
           <div class="timeline-track">
             <div class="timeline-track-fill" id="tl-track-fill"></div>
           </div>
           <div class="timeline-events" id="tl-events"></div>
+          <div class="timeline-event-pips" id="tl-event-pips"></div>
           <div class="timeline-playhead" id="tl-playhead"></div>
           <div class="timeline-labels" id="tl-labels"></div>
         </div>
@@ -151,6 +162,8 @@ export class Timeline {
     this.playhead = this.root.querySelector('#tl-playhead')!;
     this.labelsRow = this.root.querySelector('#tl-labels')!;
     this.eventsLayer = this.root.querySelector('#tl-events')!;
+    this.eventPipsLayer = this.root.querySelector('#tl-event-pips')!;
+    this.speedPresetsContainer = this.root.querySelector('#tl-speed-presets')!;
     this.ticksLayer = this.root.querySelector('#tl-ticks')!;
 
     // Initial render
@@ -182,6 +195,14 @@ export class Timeline {
     // Live button
     this.liveBtn!.addEventListener('click', () => {
       this.timeController.goLive();
+    });
+
+    // Speed preset buttons
+    this.speedPresetsContainer!.querySelectorAll('.tl-speed-preset').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const speed = parseInt((btn as HTMLElement).dataset.speed || '1', 10);
+        this.timeController.setSpeed(speed as import('../time/controller').PlaybackSpeed);
+      });
     });
 
     // Date picker
@@ -318,6 +339,12 @@ export class Timeline {
     // Speed button
     this.speedBtn!.textContent = `${state.speed}x`;
 
+    // Update speed preset active state
+    this.speedPresetsContainer?.querySelectorAll('.tl-speed-preset').forEach((btn) => {
+      const speed = parseInt((btn as HTMLElement).dataset.speed || '0', 10);
+      btn.classList.toggle('active', speed === state.speed);
+    });
+
     // Update scrubber position
     this.updateScrubber();
 
@@ -449,6 +476,18 @@ export class Timeline {
     }
 
     this.eventsLayer.innerHTML = html;
+
+    // Render event pips on the track bar (small red lines)
+    if (this.eventPipsLayer) {
+      let pipHtml = '';
+      for (const evt of this.events) {
+        const t = evt.time.getTime();
+        if (t < startMs || t > this.rangeEnd.getTime()) continue;
+        const pct = ((t - startMs) / this.rangeMs) * 100;
+        pipHtml += `<div class="timeline-event-pip" style="left:${pct.toFixed(2)}%"></div>`;
+      }
+      this.eventPipsLayer.innerHTML = pipHtml;
+    }
 
     // Bind click events
     this.eventsLayer.querySelectorAll('.timeline-event-marker').forEach((marker) => {

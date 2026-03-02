@@ -110,7 +110,7 @@ export class SnapshotAPIAdapter implements DataAdapter {
   private cache: Map<string, { data: SnapshotResponse; fetchedAt: number }> = new Map();
   private static readonly CACHE_TTL = 5000; // 5s cache for replay data
 
-  constructor(source: string, baseUrl: string = 'http://localhost:3020', rangeSeconds: number = 60) {
+  constructor(source: string, baseUrl: string = '/recorder', rangeSeconds: number = 60) {
     this.source = source;
     this.baseUrl = baseUrl;
     this.rangeSeconds = rangeSeconds;

@@ -52,21 +52,12 @@ const timeController = new TimeController();
 flightTracker.setTimeController(timeController);
 satRenderer.setTimeController(timeController);
 maritimeTracker.setTimeController(timeController);
-const eventAdapter = new SnapshotAPIAdapter('events', 'http://localhost:3020');
-const timeline = new Timeline(timeController, {
-  onFlyToEvent: (evt) => {
-    flyToCinematic(viewer, evt.lon, evt.lat, 500000, 1.5);
-  },
-  onModeChange: (mode) => {
-    controls.showToast(mode === 'LIVE' ? 'LIVE MODE' : 'REPLAY MODE');
-  },
-}, eventAdapter);
-
-// Set timeline range: Feb 28 (start of strikes) to now
-timeline.setRange(
-  new Date('2026-02-28T00:00:00Z'),
-  new Date()
-);
+// Recorder API — use vite proxy in dev, direct URL in prod won't work through tunnel yet
+// For now, wrap in try/catch so it doesn't break the app
+const recorderBaseUrl = '/recorder';
+const eventAdapter = new SnapshotAPIAdapter('events', recorderBaseUrl);
+// Timeline created here but wired to controls later (after controls init)
+let timeline: Timeline | null = null;
 const hud = new HUD(viewer);
 const detailPanel = new DetailPanel();
 const effectsPanel = new EffectsPanel();
@@ -187,6 +178,17 @@ const controls = new Controls({
     controls.showToast(enabled ? 'GOOGLE 3D TILES' : 'STANDARD VIEW');
   },
 });
+
+// Initialize Timeline (after controls exist)
+timeline = new Timeline(timeController, {
+  onFlyToEvent: (evt) => {
+    flyToCinematic(viewer, evt.lon, evt.lat, 500000, 1.5);
+  },
+  onModeChange: (mode) => {
+    controls.showToast(mode === 'LIVE' ? 'LIVE MODE' : 'REPLAY MODE');
+  },
+}, eventAdapter);
+timeline.setRange(new Date('2026-02-28T00:00:00Z'), new Date());
 
 // Entity picking
 const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);

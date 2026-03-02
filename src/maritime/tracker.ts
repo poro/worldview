@@ -48,7 +48,7 @@ export class MaritimeTracker {
   private onCountUpdate: ((total: number, military: number) => void) | null = null;
   private onError: ((msg: string) => void) | null = null;
   private timeController: TimeController | null = null;
-  private recorderUrl: string = 'http://localhost:3020';
+  private recorderUrl: string = '/recorder';
 
   constructor(viewer: Cesium.Viewer) {
     this.viewer = viewer;

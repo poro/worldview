@@ -6,6 +6,11 @@ export default defineConfig({
   server: {
     allowedHosts: ['worldview.game-agents.com'],
     proxy: {
+      '/recorder': {
+        target: 'http://localhost:3020',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/recorder/, ''),
+      },
       '/opensky': {
         target: 'https://opensky-network.org',
         changeOrigin: true,

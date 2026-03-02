@@ -14,6 +14,10 @@ import { EffectsPanel } from './ui/effects';
 import { ViewScoutPanel } from './viewscout';
 import { MaritimeTracker } from './maritime/tracker';
 import { DATA_AGE_UPDATE_INTERVAL } from './config';
+import { StrikeLayer } from './osint/strikes';
+import { GpsInterferenceLayer } from './osint/gps-interference';
+import { AirspaceLayer } from './osint/airspace';
+import { ShippingLayer } from './osint/shipping';
 
 // Boot sequence
 console.log(
@@ -33,6 +37,10 @@ const earthquakeLayer = new EarthquakeLayer(viewer);
 const trafficParticles = new TrafficParticles(viewer);
 const cctvLayer = new CCTVLayer(viewer);
 const maritimeTracker = new MaritimeTracker(viewer);
+const strikeLayer = new StrikeLayer(viewer);
+const gpsLayer = new GpsInterferenceLayer(viewer);
+const airspaceLayer = new AirspaceLayer(viewer);
+const shippingLayer = new ShippingLayer(viewer);
 const hud = new HUD(viewer);
 const detailPanel = new DetailPanel();
 const effectsPanel = new EffectsPanel();
@@ -164,6 +172,10 @@ handler.setInputAction((click: { position: Cesium.Cartesian2 }) => {
     if (earthquakeLayer.handlePick(picked)) return;
     if (cctvLayer.handlePick(picked)) return;
     if (maritimeTracker.handlePick(picked)) return;
+    if (strikeLayer.handlePick(picked)) return;
+    if (gpsLayer.handlePick(picked)) return;
+    if (airspaceLayer.handlePick(picked)) return;
+    if (shippingLayer.handlePick(picked)) return;
   }
   // Clicked empty space — deselect
   detailPanel.hide();
@@ -263,6 +275,33 @@ document.addEventListener('keydown', (e) => {
       e.preventDefault();
       (window as { __searchInput?: HTMLInputElement }).__searchInput?.focus();
       break;
+    // Overlay toggles
+    case 'j':
+    case 'J':
+      gpsLayer.toggle();
+      controls.showToast(gpsLayer.visible ? 'GPS INTERFERENCE ON' : 'GPS INTERFERENCE OFF');
+      break;
+    case 'z':
+    case 'Z':
+      airspaceLayer.toggle();
+      controls.showToast(airspaceLayer.visible ? 'NO-FLY ZONES ON' : 'NO-FLY ZONES OFF');
+      break;
+    case 'x':
+    case 'X':
+      strikeLayer.toggle();
+      controls.showToast(strikeLayer.visible ? 'STRIKES ON' : 'STRIKES OFF');
+      break;
+    case 'l':
+    case 'L':
+      shippingLayer.toggle();
+      controls.showToast(shippingLayer.visible ? 'SHIPPING LANES ON' : 'SHIPPING LANES OFF');
+      break;
+    // Quick zoom: Iran theater
+    case 'p':
+    case 'P':
+      flyToCinematic(viewer, 53, 32, 3000000, 2);
+      controls.showToast('NAVIGATING → IRAN THEATER');
+      break;
     case 'Escape':
       detailPanel.hide();
       flightTracker.selectByIcao(null);
@@ -342,9 +381,9 @@ setInterval(() => {
 async function boot() {
   console.log('[WORLDVIEW] Booting systems...');
 
-  // Set initial camera — overview of Earth
+  // Set initial camera — Iran theater (Operation Epic Fury)
   viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(-98, 39, 20000000),
+    destination: Cesium.Cartesian3.fromDegrees(53, 32, 5000000),
     duration: 0,
   });
 
@@ -392,6 +431,27 @@ async function boot() {
 
   // Update earthquake count
   hud.updateQuakeCount(earthquakeLayer.quakeCount);
+
+  // Load conflict overlays
+  try {
+    strikeLayer.load();
+    console.log('[WORLDVIEW] Strikes ✓');
+  } catch (e) { console.warn('[WORLDVIEW] Strikes failed:', e); }
+
+  try {
+    gpsLayer.load();
+    console.log('[WORLDVIEW] GPS Interference ✓');
+  } catch (e) { console.warn('[WORLDVIEW] GPS Interference failed:', e); }
+
+  try {
+    airspaceLayer.load();
+    console.log('[WORLDVIEW] Airspace ✓');
+  } catch (e) { console.warn('[WORLDVIEW] Airspace failed:', e); }
+
+  try {
+    shippingLayer.load();
+    console.log('[WORLDVIEW] Shipping ✓');
+  } catch (e) { console.warn('[WORLDVIEW] Shipping failed:', e); }
 
   console.log('[WORLDVIEW] All systems online.');
 }

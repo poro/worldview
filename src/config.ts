@@ -30,6 +30,11 @@ export const EQ_PULSE_MIN_SCALE = 0.85;
 export const EQ_PULSE_MAX_SCALE = 1.15;
 export const EQ_PULSE_PERIOD = 2000; // ms
 
+// --- Maritime Config ---
+export const MARITIME_UPDATE_INTERVAL = 60000; // 60s (AIS data is slower)
+export const MARITIME_TRAIL_MAX_POINTS = 12;
+export const MARITIME_TRAIL_WIDTH = 1.5;
+
 // --- Traffic Config ---
 export const TRAFFIC_MAX_PARTICLES = 2500;
 export const TRAFFIC_ALTITUDE_THRESHOLD = 10000; // meters
@@ -79,11 +84,25 @@ export const COLORS = {
   satWeather: '#00e5ff',
   satGps: '#00ff88',
 
-  // Military
+  // Military aircraft categories
   military: '#ff4500',
   militaryLabel: '#ff6633',
+  milFighter: '#ff3d3d',
+  milBomber: '#ff3d3d',
+  milTanker: '#ffb300',
+  milISR: '#ff8c00',
+  milTransport: '#00ff88',
+  milHelicopter: '#00e5ff',
   commercialLabel: '#c0c0c0',
   commercialDimAlpha: 0.15,
+
+  // Maritime vessel types
+  vesselCargo: '#808080',
+  vesselTanker: '#4dabf7',
+  vesselPassenger: '#ffffff',
+  vesselFishing: '#00e5ff',
+  vesselMilitary: '#ff3d3d',
+  vesselTug: '#ffb300',
 
   // UI
   accent: '#00ff88',

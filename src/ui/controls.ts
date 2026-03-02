@@ -30,6 +30,7 @@ export interface ControlCallbacks {
   onToggleCCTV: () => void;
   onToggleHUD: () => void;
   onToggleViewScout: () => void;
+  onToggleMaritime: () => void;
   onSearch: (query: string) => void;
   onLocationSelect: (preset: LocationPreset) => void;
   onToggle3D: () => void;
@@ -112,7 +113,8 @@ export class Controls {
       { id: 'earthquakes', label: 'QUAKES', icon: '\u25CE', key: 'G', active: true },
       { id: 'traffic', label: 'TRAFFIC', icon: '\u25CF', key: 'T', active: true },
       { id: 'cctv', label: 'CCTV', icon: '\u25CE', key: 'C', active: true },
-      { id: 'viewscout', label: 'VIEWSCOUT', icon: '⊕', key: 'V', active: false },
+      { id: 'maritime', label: 'SHIPS', icon: '\u2693', key: 'N', active: true },
+      { id: 'viewscout', label: 'VIEWSCOUT', icon: '\u2295', key: 'V', active: false },
     ];
 
     const panel = document.createElement('div');
@@ -142,6 +144,7 @@ export class Controls {
         else if (l.id === 'earthquakes') this.callbacks.onToggleEarthquakes();
         else if (l.id === 'traffic') this.callbacks.onToggleTraffic();
         else if (l.id === 'cctv') this.callbacks.onToggleCCTV();
+        else if (l.id === 'maritime') this.callbacks.onToggleMaritime();
         else if (l.id === 'viewscout') this.callbacks.onToggleViewScout();
       });
     });
@@ -285,6 +288,7 @@ export class Controls {
           <div><span class="text-gray-500">T</span> Traffic</div>
           <div><span class="text-gray-500">G</span> Quakes</div>
           <div><span class="text-gray-500">C</span> CCTV</div>
+          <div><span class="text-gray-500">N</span> Ships</div>
           <div><span class="text-gray-500">H</span> HUD</div>
           <div><span class="text-gray-500">/</span> Search</div>
           <div class="mt-1 pt-1 border-t border-gray-800"><span class="text-cyan-600">Q-I</span> <span class="text-cyan-700">Locations</span></div>

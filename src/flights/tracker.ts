@@ -2,7 +2,17 @@ import * as Cesium from 'cesium';
 import { fetchFlights } from './api';
 import { FlightState, parseFlightState } from './types';
 import { altitudeToColor } from '../utils/format';
-import { isMilitaryFlight, MILITARY_SVG } from './military';
+import {
+  classifyMilitary,
+  MilitaryClassification,
+  MilitaryAircraftCategory,
+  MilitaryCategoryCounts,
+  emptyCategoryCounts,
+  MILITARY_CATEGORY_SVGS,
+  MILITARY_CATEGORY_COLORS,
+  checkSquawk,
+  SquawkAlert,
+} from './military';
 import {
   FLIGHT_UPDATE_INTERVAL,
   FLIGHT_TRAIL_MAX_POINTS,
@@ -21,7 +31,11 @@ import {
 
 const AIRCRAFT_SVG = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M12 2L8 10H2L4 13H8L10 22H14L12 13H20L22 10H16L12 2Z"/></svg>`)}`;
 
-const MILITARY_COLOR = Cesium.Color.fromCssColorString(COLORS.military);
+export interface MilitaryFlightInfo {
+  flight: FlightState;
+  classification: MilitaryClassification;
+  squawkAlert: SquawkAlert | null;
+}
 
 export class FlightTracker {
   private viewer: Cesium.Viewer;
@@ -30,14 +44,16 @@ export class FlightTracker {
   private flights: Map<string, FlightState> = new Map();
   private positionHistory: Map<string, { lon: number; lat: number; alt: number }[]> = new Map();
   private militaryIcaos: Set<string> = new Set();
+  private militaryClassifications: Map<string, MilitaryClassification> = new Map();
+  private _militaryCategoryCounts: MilitaryCategoryCounts = emptyCategoryCounts();
   private interval: ReturnType<typeof setInterval> | null = null;
   private lastUpdate: number = 0;
   private _visible: boolean = true;
   private _militaryMode: boolean = false;
   private _selectedFlight: FlightState | null = null;
-  private onSelect: ((flight: FlightState | null) => void) | null = null;
+  private onSelect: ((flight: FlightState | null, milInfo?: MilitaryFlightInfo) => void) | null = null;
   private onCountUpdate: ((count: number) => void) | null = null;
-  private onMilitaryCountUpdate: ((count: number) => void) | null = null;
+  private onMilitaryCountUpdate: ((count: number, categoryCounts: MilitaryCategoryCounts) => void) | null = null;
   private onError: ((msg: string) => void) | null = null;
 
   constructor(viewer: Cesium.Viewer) {
@@ -46,14 +62,15 @@ export class FlightTracker {
 
   get flightCount(): number { return this.flights.size; }
   get militaryCount(): number { return this.militaryIcaos.size; }
+  get militaryCategoryCounts(): MilitaryCategoryCounts { return this._militaryCategoryCounts; }
   get selectedFlight(): FlightState | null { return this._selectedFlight; }
   get visible(): boolean { return this._visible; }
   get militaryMode(): boolean { return this._militaryMode; }
   get lastUpdateTime(): number { return this.lastUpdate; }
 
-  setOnSelect(cb: (flight: FlightState | null) => void) { this.onSelect = cb; }
+  setOnSelect(cb: (flight: FlightState | null, milInfo?: MilitaryFlightInfo) => void) { this.onSelect = cb; }
   setOnCountUpdate(cb: (count: number) => void) { this.onCountUpdate = cb; }
-  setOnMilitaryCountUpdate(cb: (count: number) => void) { this.onMilitaryCountUpdate = cb; }
+  setOnMilitaryCountUpdate(cb: (count: number, categoryCounts: MilitaryCategoryCounts) => void) { this.onMilitaryCountUpdate = cb; }
   setOnError(cb: (msg: string) => void) { this.onError = cb; }
 
   async start() {
@@ -92,7 +109,10 @@ export class FlightTracker {
         if (isMil) {
           entity.show = this._visible;
           if (entity.billboard) {
-            entity.billboard.color = new Cesium.ConstantProperty(MILITARY_COLOR);
+            const cls = this.militaryClassifications.get(icao);
+            const cat = cls?.category || 'unknown';
+            const milColor = Cesium.Color.fromCssColorString(MILITARY_CATEGORY_COLORS[cat]);
+            entity.billboard.color = new Cesium.ConstantProperty(milColor);
             entity.billboard.scale = new Cesium.ConstantProperty(1.3);
           }
         } else {
@@ -115,7 +135,10 @@ export class FlightTracker {
           const alt = flight.baroAltitude || flight.geoAltitude || 10000;
           if (isMil) {
             if (entity.billboard) {
-              entity.billboard.color = new Cesium.ConstantProperty(MILITARY_COLOR);
+              const cls = this.militaryClassifications.get(icao);
+              const cat = cls?.category || 'unknown';
+              const milColor = Cesium.Color.fromCssColorString(MILITARY_CATEGORY_COLORS[cat]);
+              entity.billboard.color = new Cesium.ConstantProperty(milColor);
               entity.billboard.scale = new Cesium.ConstantProperty(1.0);
             }
           } else {
@@ -151,7 +174,16 @@ export class FlightTracker {
     const flight = this.flights.get(icao);
     if (flight) {
       this._selectedFlight = flight;
-      this.onSelect?.(flight);
+      const cls = this.militaryClassifications.get(icao);
+      if (cls?.isMilitary) {
+        this.onSelect?.(flight, {
+          flight,
+          classification: cls,
+          squawkAlert: checkSquawk(flight.squawk),
+        });
+      } else {
+        this.onSelect?.(flight);
+      }
     }
   }
 
@@ -172,6 +204,8 @@ export class FlightTracker {
       this.lastUpdate = Date.now();
       const currentIcaos = new Set<string>();
       this.militaryIcaos.clear();
+      this.militaryClassifications.clear();
+      const categoryCounts = emptyCategoryCounts();
 
       // Batch entity updates
       this.viewer.entities.suspendEvents();
@@ -185,17 +219,21 @@ export class FlightTracker {
           currentIcaos.add(flight.icao24);
           this.flights.set(flight.icao24, flight);
 
-          const isMil = isMilitaryFlight(flight);
+          const cls = classifyMilitary(flight);
+          const isMil = cls.isMilitary;
           if (isMil) {
             this.militaryIcaos.add(flight.icao24);
+            this.militaryClassifications.set(flight.icao24, cls);
+            categoryCounts[cls.category]++;
           }
 
           const alt = flight.baroAltitude || flight.geoAltitude || 10000;
-          const color = isMil
-            ? MILITARY_COLOR
-            : Cesium.Color.fromCssColorString(altitudeToColor(alt));
+          const milColor = isMil
+            ? Cesium.Color.fromCssColorString(MILITARY_CATEGORY_COLORS[cls.category])
+            : null;
+          const color = milColor || Cesium.Color.fromCssColorString(altitudeToColor(alt));
           const heading = flight.trueTrack || 0;
-          const icon = isMil ? MILITARY_SVG : AIRCRAFT_SVG;
+          const icon = isMil ? MILITARY_CATEGORY_SVGS[cls.category] : AIRCRAFT_SVG;
 
           // Track position history for trails
           this.trackPosition(flight.icao24, flight.longitude, flight.latitude, alt);
@@ -210,7 +248,7 @@ export class FlightTracker {
               entity.billboard.image = new Cesium.ConstantProperty(icon);
               if (this._militaryMode) {
                 if (isMil) {
-                  entity.billboard.color = new Cesium.ConstantProperty(MILITARY_COLOR);
+                  entity.billboard.color = new Cesium.ConstantProperty(color);
                   entity.billboard.scale = new Cesium.ConstantProperty(1.3);
                 } else {
                   entity.billboard.color = new Cesium.ConstantProperty(color.withAlpha(COLORS.commercialDimAlpha));
@@ -248,7 +286,7 @@ export class FlightTracker {
                 text: flight.callsign || flight.icao24,
                 font: AIRCRAFT_LABEL_FONT,
                 fillColor: isMil
-                  ? Cesium.Color.fromCssColorString(COLORS.militaryLabel)
+                  ? Cesium.Color.fromCssColorString(MILITARY_CATEGORY_COLORS[cls.category])
                   : Cesium.Color.fromCssColorString(COLORS.commercialLabel),
                 outlineColor: Cesium.Color.BLACK,
                 outlineWidth: 2,
@@ -269,7 +307,7 @@ export class FlightTracker {
           }
 
           // Update trail polyline
-          this.updateTrail(flight.icao24, isMil, alt);
+          this.updateTrail(flight.icao24, isMil, alt, cls.category);
         }
 
         // Remove stale entities
@@ -290,15 +328,25 @@ export class FlightTracker {
         this.viewer.entities.resumeEvents();
       }
 
+      this._militaryCategoryCounts = categoryCounts;
       this.onCountUpdate?.(this.flights.size);
-      this.onMilitaryCountUpdate?.(this.militaryIcaos.size);
+      this.onMilitaryCountUpdate?.(this.militaryIcaos.size, categoryCounts);
 
       // Update selected flight data
       if (this._selectedFlight) {
         const updated = this.flights.get(this._selectedFlight.icao24);
         if (updated) {
           this._selectedFlight = updated;
-          this.onSelect?.(updated);
+          const cls = this.militaryClassifications.get(updated.icao24);
+          if (cls?.isMilitary) {
+            this.onSelect?.(updated, {
+              flight: updated,
+              classification: cls,
+              squawkAlert: checkSquawk(updated.squawk),
+            });
+          } else {
+            this.onSelect?.(updated);
+          }
         }
       }
     } catch (e) {
@@ -319,7 +367,7 @@ export class FlightTracker {
     }
   }
 
-  private updateTrail(icao: string, isMil: boolean, alt: number) {
+  private updateTrail(icao: string, isMil: boolean, alt: number, category: MilitaryAircraftCategory) {
     const history = this.positionHistory.get(icao);
     if (!history || history.length < 2) return;
 
@@ -328,7 +376,7 @@ export class FlightTracker {
     );
 
     const trailColor = isMil
-      ? MILITARY_COLOR.withAlpha(0.4)
+      ? Cesium.Color.fromCssColorString(MILITARY_CATEGORY_COLORS[category]).withAlpha(0.4)
       : Cesium.Color.fromCssColorString(altitudeToColor(alt)).withAlpha(0.3);
 
     if (this.trailEntities.has(icao)) {

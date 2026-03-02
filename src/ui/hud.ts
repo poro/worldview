@@ -2,6 +2,7 @@ import * as Cesium from 'cesium';
 import { formatUTC, formatLocal } from '../utils/time';
 import { formatCoord, formatAltitude } from '../utils/format';
 import { FilterMode } from '../filters/manager';
+import { MilitaryCategoryCounts } from '../flights/military';
 
 export class HUD {
   private container: HTMLElement;
@@ -17,11 +18,15 @@ export class HUD {
     militaryCount: HTMLElement;
     satCount: HTMLElement;
     quakeCount: HTMLElement;
+    vesselCount: HTMLElement;
+    milVesselCount: HTMLElement;
     dataAge: HTMLElement;
     fpsCounter: HTMLElement;
     loadingFlights: HTMLElement;
     loadingSats: HTMLElement;
     loadingQuakes: HTMLElement;
+    loadingVessels: HTMLElement;
+    milBreakdown: HTMLElement;
   };
 
   constructor(viewer: Cesium.Viewer) {
@@ -53,15 +58,40 @@ export class HUD {
     this.animateCount(this.elements.satCount);
   }
 
-  updateMilitaryCount(count: number) {
+  updateMilitaryCount(count: number, categoryCounts?: MilitaryCategoryCounts) {
     this.elements.militaryCount.textContent = count.toLocaleString();
     this.animateCount(this.elements.militaryCount);
+
+    // Update breakdown tooltip
+    if (categoryCounts) {
+      const parts: string[] = [];
+      if (categoryCounts.fighter > 0) parts.push(`F:${categoryCounts.fighter}`);
+      if (categoryCounts.bomber > 0) parts.push(`B:${categoryCounts.bomber}`);
+      if (categoryCounts.tanker > 0) parts.push(`T:${categoryCounts.tanker}`);
+      if (categoryCounts.isr > 0) parts.push(`I:${categoryCounts.isr}`);
+      if (categoryCounts.transport > 0) parts.push(`C:${categoryCounts.transport}`);
+      if (categoryCounts.helicopter > 0) parts.push(`H:${categoryCounts.helicopter}`);
+      if (categoryCounts.unknown > 0) parts.push(`?:${categoryCounts.unknown}`);
+      this.elements.milBreakdown.textContent = parts.length > 0 ? parts.join(' ') : '';
+      this.elements.milBreakdown.style.display = parts.length > 0 ? 'inline' : 'none';
+    }
   }
 
   updateQuakeCount(count: number) {
     this.elements.quakeCount.textContent = count.toLocaleString();
     this.elements.loadingQuakes.style.display = 'none';
     this.animateCount(this.elements.quakeCount);
+  }
+
+  updateVesselCount(count: number) {
+    this.elements.vesselCount.textContent = count.toLocaleString();
+    this.elements.loadingVessels.style.display = 'none';
+    this.animateCount(this.elements.vesselCount);
+  }
+
+  updateMilitaryVesselCount(count: number) {
+    this.elements.milVesselCount.textContent = count.toLocaleString();
+    this.animateCount(this.elements.milVesselCount);
   }
 
   updateFilter(mode: FilterMode) {
@@ -147,6 +177,7 @@ export class HUD {
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#ff4500" stroke-width="1.5"><polygon points="8,1 14,8 8,15 2,8"/></svg>
           <span class="data-label mr-1">MIL</span>
           <span class="text-orange-400 text-xs font-medium stat-value" id="hud-military">0</span>
+          <span class="text-[8px] text-gray-600 ml-1" id="hud-mil-breakdown" style="display:none"></span>
         </div>
         <div class="w-px h-4 bg-gray-800"></div>
         <div class="flex items-center gap-2">
@@ -161,6 +192,19 @@ export class HUD {
           <span class="data-label mr-1">QUAKES</span>
           <span class="text-red-400 text-xs font-medium stat-value" id="hud-quakes">0</span>
           <span class="loading-indicator text-[9px] text-gray-500 animate-pulse" id="loading-quakes">LOADING...</span>
+        </div>
+        <div class="w-px h-4 bg-gray-800"></div>
+        <div class="flex items-center gap-2">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="1.5"><path d="M12 3L7 12L4 20L12 17L20 20L17 12L12 3Z"/></svg>
+          <span class="data-label mr-1">SHIPS</span>
+          <span class="text-gray-400 text-xs font-medium stat-value" id="hud-vessels">0</span>
+          <span class="loading-indicator text-[9px] text-gray-500 animate-pulse" id="loading-vessels">LOADING...</span>
+        </div>
+        <div class="w-px h-4 bg-gray-800"></div>
+        <div class="flex items-center gap-2">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ff3d3d" stroke-width="1.5"><path d="M12 2L4 8L4 16L12 22L20 16L20 8Z"/></svg>
+          <span class="data-label mr-1">NAV MIL</span>
+          <span class="text-red-400 text-xs font-medium stat-value" id="hud-mil-vessels">0</span>
         </div>
         <div class="w-px h-4 bg-gray-800"></div>
         <div class="flex items-center gap-2">
@@ -199,11 +243,15 @@ export class HUD {
       militaryCount: document.getElementById('hud-military')!,
       satCount: document.getElementById('hud-sats')!,
       quakeCount: document.getElementById('hud-quakes')!,
+      vesselCount: document.getElementById('hud-vessels')!,
+      milVesselCount: document.getElementById('hud-mil-vessels')!,
       dataAge: document.getElementById('hud-data-age')!,
       fpsCounter: document.getElementById('hud-fps')!,
       loadingFlights: document.getElementById('loading-flights')!,
       loadingSats: document.getElementById('loading-sats')!,
       loadingQuakes: document.getElementById('loading-quakes')!,
+      loadingVessels: document.getElementById('loading-vessels')!,
+      milBreakdown: document.getElementById('hud-mil-breakdown')!,
     };
   }
 

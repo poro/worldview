@@ -12,6 +12,7 @@ import { TrafficParticles } from './traffic/particles';
 import { CCTVLayer } from './cctv/feeds';
 import { EffectsPanel } from './ui/effects';
 import { ViewScoutPanel } from './viewscout';
+import { MaritimeTracker } from './maritime/tracker';
 import { DATA_AGE_UPDATE_INTERVAL } from './config';
 
 // Boot sequence
@@ -31,6 +32,7 @@ const filterManager = new FilterManager(viewer);
 const earthquakeLayer = new EarthquakeLayer(viewer);
 const trafficParticles = new TrafficParticles(viewer);
 const cctvLayer = new CCTVLayer(viewer);
+const maritimeTracker = new MaritimeTracker(viewer);
 const hud = new HUD(viewer);
 const detailPanel = new DetailPanel();
 const effectsPanel = new EffectsPanel();
@@ -43,7 +45,7 @@ const viewScoutPanel = new ViewScoutPanel(viewer, {
 
 // Wire up callbacks
 flightTracker.setOnCountUpdate((count) => hud.updateFlightCount(count));
-flightTracker.setOnMilitaryCountUpdate((count) => hud.updateMilitaryCount(count));
+flightTracker.setOnMilitaryCountUpdate((count, categoryCounts) => hud.updateMilitaryCount(count, categoryCounts));
 satRenderer.setOnCountUpdate((count) => hud.updateSatCount(count));
 filterManager.setOnChange((mode) => {
   hud.updateFilter(mode);
@@ -55,8 +57,8 @@ effectsPanel.setOnParamChange((_filter, params) => {
   filterManager.updateParams(params);
 });
 
-flightTracker.setOnSelect((flight) => {
-  if (flight) detailPanel.showFlight(flight);
+flightTracker.setOnSelect((flight, milInfo) => {
+  if (flight) detailPanel.showFlight(flight, milInfo);
   else detailPanel.hide();
 });
 
@@ -70,15 +72,27 @@ earthquakeLayer.setOnSelect((eq) => {
   else detailPanel.hide();
 });
 
+maritimeTracker.setOnSelect((vessel) => {
+  if (vessel) detailPanel.showVessel(vessel);
+  else detailPanel.hide();
+});
+
+maritimeTracker.setOnCountUpdate((total, military) => {
+  hud.updateVesselCount(total);
+  hud.updateMilitaryVesselCount(military);
+});
+
 detailPanel.setOnClose(() => {
   flightTracker.selectByIcao(null);
   satRenderer.selectByNoradId(null);
+  maritimeTracker.selectByMmsi(null);
 });
 
 // Error callbacks — show toast on data feed failures
 flightTracker.setOnError((msg) => controls.showToast(msg, 'error'));
 satRenderer.setOnError((msg) => controls.showToast(msg, 'error'));
 earthquakeLayer.setOnError((msg) => controls.showToast(msg, 'error'));
+maritimeTracker.setOnError((msg) => controls.showToast(msg, 'error'));
 
 // Navigate to location preset
 function navigateToPreset(preset: LocationPreset) {
@@ -129,6 +143,10 @@ const controls = new Controls({
   onToggleViewScout: () => {
     viewScoutPanel.toggle();
   },
+  onToggleMaritime: () => {
+    maritimeTracker.toggle();
+    controls.setLayerState('maritime', maritimeTracker.visible);
+  },
   onToggle3D: () => {
     const enabled = toggleGoogle3D(viewer);
     controls.setTileMode(enabled);
@@ -145,11 +163,13 @@ handler.setInputAction((click: { position: Cesium.Cartesian2 }) => {
     if (satRenderer.handlePick(picked)) return;
     if (earthquakeLayer.handlePick(picked)) return;
     if (cctvLayer.handlePick(picked)) return;
+    if (maritimeTracker.handlePick(picked)) return;
   }
   // Clicked empty space — deselect
   detailPanel.hide();
   flightTracker.selectByIcao(null);
   satRenderer.selectByNoradId(null);
+  maritimeTracker.selectByMmsi(null);
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
 // Keyboard shortcuts
@@ -213,6 +233,11 @@ document.addEventListener('keydown', (e) => {
       flightTracker.toggleMilitary();
       controls.setLayerState('military', flightTracker.militaryMode);
       break;
+    case 'n':
+    case 'N':
+      maritimeTracker.toggle();
+      controls.setLayerState('maritime', maritimeTracker.visible);
+      break;
     case 'h':
     case 'H':
       hud.toggle();
@@ -242,6 +267,7 @@ document.addEventListener('keydown', (e) => {
       detailPanel.hide();
       flightTracker.selectByIcao(null);
       satRenderer.selectByNoradId(null);
+      maritimeTracker.selectByMmsi(null);
       cctvLayer.closeFeedPanel();
       break;
   }
@@ -348,9 +374,13 @@ async function boot() {
       console.warn('[WORLDVIEW] Earthquakes failed:', e);
       controls.showToast('EARTHQUAKE DATA UNAVAILABLE', 'error');
     }),
+    maritimeTracker.start().catch((e: Error) => {
+      console.warn('[WORLDVIEW] Maritime failed:', e);
+      controls.showToast('MARITIME DATA UNAVAILABLE', 'error');
+    }),
   ]);
 
-  const names = ['Flights', 'Satellites', 'Earthquakes'];
+  const names = ['Flights', 'Satellites', 'Earthquakes', 'Maritime'];
   results.forEach((r, i) => {
     if (r.status === 'fulfilled') {
       console.log(`[WORLDVIEW] ${names[i]} \u2713`);

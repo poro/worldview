@@ -1,6 +1,7 @@
 import * as Cesium from 'cesium';
 import { TLERecord, fetchTLEs } from './tle';
 import { propagateSatellite, computeOrbitPath, SatellitePosition } from './propagator';
+import { TimeController } from '../time/controller';
 import {
   SAT_MAX_PER_CATEGORY,
   SAT_ORBIT_STEPS,
@@ -33,9 +34,16 @@ export class SatelliteRenderer {
   private onSelect: ((sat: SatellitePosition | null) => void) | null = null;
   private onCountUpdate: ((count: number) => void) | null = null;
   private onError: ((msg: string) => void) | null = null;
+  private timeController: TimeController | null = null;
 
   constructor(viewer: Cesium.Viewer) {
     this.viewer = viewer;
+  }
+
+  setTimeController(tc: TimeController) { this.timeController = tc; }
+
+  private getEffectiveTime(): Date {
+    return this.timeController ? this.timeController.getEffectiveTime() : new Date();
   }
 
   get visible(): boolean { return this._visible; }
@@ -118,7 +126,7 @@ export class SatelliteRenderer {
       for (const tle of records) {
         const id = tle.line1.substring(2, 7).trim();
         if (id === noradId) {
-          const pos = propagateSatellite(tle, new Date());
+          const pos = propagateSatellite(tle, this.getEffectiveTime());
           if (pos) {
             this._selectedSat = pos;
             this._selectedTle = tle;
@@ -132,7 +140,7 @@ export class SatelliteRenderer {
   }
 
   private showOrbit(tle: TLERecord) {
-    const path = computeOrbitPath(tle, new Date(), SAT_ORBIT_STEPS);
+    const path = computeOrbitPath(tle, this.getEffectiveTime(), SAT_ORBIT_STEPS);
     if (path.length < 2) return;
 
     const color = Cesium.Color.fromCssColorString(CATEGORY_COLORS[tle.category] || '#ffffff').withAlpha(0.4);
@@ -182,7 +190,7 @@ export class SatelliteRenderer {
     const records = this.tles.get(category);
     if (!records) return;
 
-    const now = new Date();
+    const now = this.getEffectiveTime();
     const colorStr = CATEGORY_COLORS[category] || '#ffffff';
     const color = Cesium.Color.fromCssColorString(colorStr);
 
@@ -253,7 +261,7 @@ export class SatelliteRenderer {
   }
 
   private updatePositions() {
-    const now = new Date();
+    const now = this.getEffectiveTime();
     for (const [category, records] of this.tles) {
       if (!this._activeCategories.has(category)) continue;
       for (const tle of records) {

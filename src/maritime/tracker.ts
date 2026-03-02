@@ -2,6 +2,7 @@ import * as Cesium from 'cesium';
 import { fetchVessels } from './api';
 import { Vessel, VesselType } from './types';
 import { detectStrikeGroups } from './military';
+import { TimeController } from '../time/controller';
 import {
   MARITIME_UPDATE_INTERVAL,
   MARITIME_TRAIL_MAX_POINTS,
@@ -46,9 +47,16 @@ export class MaritimeTracker {
   private onSelect: ((vessel: Vessel | null) => void) | null = null;
   private onCountUpdate: ((total: number, military: number) => void) | null = null;
   private onError: ((msg: string) => void) | null = null;
+  private timeController: TimeController | null = null;
+  private recorderUrl: string = 'http://localhost:3020';
 
   constructor(viewer: Cesium.Viewer) {
     this.viewer = viewer;
+  }
+
+  setTimeController(tc: TimeController, recorderUrl?: string) {
+    this.timeController = tc;
+    if (recorderUrl) this.recorderUrl = recorderUrl;
   }
 
   get vesselCount(): number { return this.vessels.size; }
@@ -107,9 +115,42 @@ export class MaritimeTracker {
     return false;
   }
 
+  private async fetchReplayVessels(): Promise<{ vessels: Vessel[] }> {
+    if (!this.timeController) return { vessels: [] };
+    const t = this.timeController.getEffectiveTime();
+    const unix = Math.floor(t.getTime() / 1000);
+    try {
+      const res = await fetch(`${this.recorderUrl}/api/snapshots?source=maritime&time=${unix}&range=300`);
+      if (!res.ok) return { vessels: [] };
+      const data = await res.json();
+      const rows = data.rows || data.entities || [];
+      return {
+        vessels: rows.map((r: Record<string, unknown>) => ({
+          mmsi: String(r.mmsi || ''),
+          name: String(r.name || 'Unknown'),
+          lat: Number(r.lat || 0),
+          lon: Number(r.lon || 0),
+          heading: Number(r.heading || 0),
+          course: Number(r.heading || 0),
+          speed: Number(r.speed || 0),
+          type: (r.ship_type || 'other') as VesselType,
+          isMilitary: Boolean(r.is_military),
+          flag: String(r.flag || ''),
+          destination: '',
+          length: 0,
+          width: 0,
+        })),
+      };
+    } catch {
+      return { vessels: [] };
+    }
+  }
+
   private async update() {
     try {
-      const data = await fetchVessels();
+      const data = (this.timeController && this.timeController.isReplay)
+        ? await this.fetchReplayVessels()
+        : await fetchVessels();
       if (!data.vessels || data.vessels.length === 0) return;
 
       this.lastUpdate = Date.now();

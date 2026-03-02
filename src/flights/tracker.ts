@@ -1,6 +1,7 @@
 import * as Cesium from 'cesium';
 import { fetchFlights } from './api';
 import { FlightState, parseFlightState } from './types';
+import { TimeController } from '../time/controller';
 import { altitudeToColor } from '../utils/format';
 import {
   classifyMilitary,
@@ -55,9 +56,16 @@ export class FlightTracker {
   private onCountUpdate: ((count: number) => void) | null = null;
   private onMilitaryCountUpdate: ((count: number, categoryCounts: MilitaryCategoryCounts) => void) | null = null;
   private onError: ((msg: string) => void) | null = null;
+  private timeController: TimeController | null = null;
+  private recorderUrl: string = 'http://localhost:3020';
 
   constructor(viewer: Cesium.Viewer) {
     this.viewer = viewer;
+  }
+
+  setTimeController(tc: TimeController, recorderUrl?: string) {
+    this.timeController = tc;
+    if (recorderUrl) this.recorderUrl = recorderUrl;
   }
 
   get flightCount(): number { return this.flights.size; }
@@ -196,9 +204,39 @@ export class FlightTracker {
     return false;
   }
 
+  private async fetchReplayFlights(): Promise<{ time: number; states: unknown[] | null }> {
+    if (!this.timeController) return { time: 0, states: null };
+    const t = this.timeController.getEffectiveTime();
+    const unix = Math.floor(t.getTime() / 1000);
+    try {
+      const res = await fetch(`${this.recorderUrl}/api/snapshots?source=flights&time=${unix}&range=300`);
+      if (!res.ok) return { time: unix, states: null };
+      const data = await res.json();
+      const rows = data.rows || data.entities || [];
+      // Convert recorder rows to OpenSky-compatible state arrays
+      const states = rows.map((r: Record<string, unknown>) => [
+        r.icao || '', r.callsign || '', r.source || 'recorded',
+        unix, unix,
+        r.lon, r.lat,
+        typeof r.altitude === 'number' ? r.altitude * 0.3048 : null,
+        false,
+        typeof r.speed === 'number' ? r.speed * 0.514444 : null,
+        r.heading ?? null,
+        null, null, null,
+        r.squawk || null,
+      ]);
+      return { time: unix, states };
+    } catch {
+      return { time: unix, states: null };
+    }
+  }
+
   private async update() {
     try {
-      const data = await fetchFlights();
+      // Use recorder data in REPLAY mode
+      const data = (this.timeController && this.timeController.isReplay)
+        ? await this.fetchReplayFlights()
+        : await fetchFlights();
       if (!data.states) return;
 
       this.lastUpdate = Date.now();
@@ -212,7 +250,7 @@ export class FlightTracker {
 
       try {
         for (const raw of data.states) {
-          const flight = parseFlightState(raw);
+          const flight = parseFlightState(raw as (string | number | boolean | null)[]);
           if (flight.longitude === null || flight.latitude === null) continue;
           if (flight.onGround) continue;
 

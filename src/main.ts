@@ -47,8 +47,11 @@ const airspaceLayer = new AirspaceLayer(viewer);
 const shippingLayer = new ShippingLayer(viewer);
 new ZoomControls(viewer);
 
-// Time Controller + Timeline
+// Time Controller + Timeline — wire to all data layers
 const timeController = new TimeController();
+flightTracker.setTimeController(timeController);
+satRenderer.setTimeController(timeController);
+maritimeTracker.setTimeController(timeController);
 const eventAdapter = new SnapshotAPIAdapter('events', 'http://localhost:3020');
 const timeline = new Timeline(timeController, {
   onFlyToEvent: (evt) => {

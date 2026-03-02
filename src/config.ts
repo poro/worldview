@@ -54,19 +54,19 @@ export const TRAFFIC_ROAD_WEIGHTS: Record<string, number> = {
 };
 
 // --- Entity Visual Config ---
-export const AIRCRAFT_ICON_SIZE = 32;
-export const AIRCRAFT_ICON_SIZE_MILITARY = 38;
+export const AIRCRAFT_ICON_SIZE = 44;
+export const AIRCRAFT_ICON_SIZE_MILITARY = 52;
 export const AIRCRAFT_LABEL_FONT = '11px JetBrains Mono';
 export const SAT_LABEL_FONT = '10px JetBrains Mono';
 export const EQ_LABEL_FONT = '10px JetBrains Mono';
 
 // --- Scale by Distance ---
-export const AIRCRAFT_SCALE_NEAR = 1.5;
-export const AIRCRAFT_SCALE_FAR = 0.4;
+export const AIRCRAFT_SCALE_NEAR = 1.8;
+export const AIRCRAFT_SCALE_FAR = 0.7;
 export const AIRCRAFT_SCALE_NEAR_DIST = 1e4;
-export const AIRCRAFT_SCALE_FAR_DIST = 1e7;
+export const AIRCRAFT_SCALE_FAR_DIST = 5e7;
 export const AIRCRAFT_TRANS_NEAR_DIST = 1e4;
-export const AIRCRAFT_TRANS_FAR_DIST = 2e7;
+export const AIRCRAFT_TRANS_FAR_DIST = 5e7;
 
 // --- Colors ---
 export const COLORS = {

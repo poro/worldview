@@ -333,7 +333,7 @@ export class FlightTracker {
                 verticalOrigin: Cesium.VerticalOrigin.CENTER,
                 horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
                 scaleByDistance: new Cesium.NearFarScalar(AIRCRAFT_SCALE_NEAR_DIST, AIRCRAFT_SCALE_NEAR, AIRCRAFT_SCALE_FAR_DIST, AIRCRAFT_SCALE_FAR),
-                translucencyByDistance: new Cesium.NearFarScalar(AIRCRAFT_TRANS_NEAR_DIST, 1.0, AIRCRAFT_TRANS_FAR_DIST, 0.3),
+                translucencyByDistance: new Cesium.NearFarScalar(AIRCRAFT_TRANS_NEAR_DIST, 1.0, AIRCRAFT_TRANS_FAR_DIST, 0.6),
                 scale: this._militaryMode && isMil ? 1.3 : 1.0,
               },
               label: {
@@ -347,7 +347,7 @@ export class FlightTracker {
                 style: Cesium.LabelStyle.FILL_AND_OUTLINE,
                 pixelOffset: new Cesium.Cartesian2(0, -18),
                 scaleByDistance: new Cesium.NearFarScalar(1e4, 1.0, 5e6, 0.0),
-                distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 3e6),
+                distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 8e6),
                 show: !(this._militaryMode && !isMil),
               },
               properties: {

@@ -19,6 +19,9 @@ import { GpsInterferenceLayer } from './osint/gps-interference';
 import { AirspaceLayer } from './osint/airspace';
 import { ShippingLayer } from './osint/shipping';
 import { ZoomControls } from './ui/zoom-controls';
+import { TimeController } from './time/controller';
+import { Timeline } from './ui/timeline';
+import { SnapshotAPIAdapter } from './time/data-adapter';
 
 // Boot sequence
 console.log(
@@ -43,6 +46,24 @@ const gpsLayer = new GpsInterferenceLayer(viewer);
 const airspaceLayer = new AirspaceLayer(viewer);
 const shippingLayer = new ShippingLayer(viewer);
 new ZoomControls(viewer);
+
+// Time Controller + Timeline
+const timeController = new TimeController();
+const eventAdapter = new SnapshotAPIAdapter('events', 'http://localhost:3020');
+const timeline = new Timeline(timeController, {
+  onFlyToEvent: (evt) => {
+    flyToCinematic(viewer, evt.lon, evt.lat, 500000, 1.5);
+  },
+  onModeChange: (mode) => {
+    controls.showToast(mode === 'LIVE' ? 'LIVE MODE' : 'REPLAY MODE');
+  },
+}, eventAdapter);
+
+// Set timeline range: Feb 28 (start of strikes) to now
+timeline.setRange(
+  new Date('2026-02-28T00:00:00Z'),
+  new Date()
+);
 const hud = new HUD(viewer);
 const detailPanel = new DetailPanel();
 const effectsPanel = new EffectsPanel();

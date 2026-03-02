@@ -79,13 +79,47 @@ export async function fetchFlights(bounds?: {
   const isDev = import.meta.env.DEV;
 
   if (isDev) {
-    const target = bounds 
-      ? `https://opendata.adsb.fi/api/v2/lat/${((bounds.lamin+bounds.lamax)/2).toFixed(1)}/lon/${((bounds.lomin+bounds.lomax)/2).toFixed(1)}/dist/250`
-      : `https://opendata.adsb.fi/api/v2/lat/39/lon/-77/dist/250`;
-    const url = `/adsbfi${new URL(target).pathname}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('adsb.fi dev error');
-    return adsbfiToOpenSky(await response.json());
+    // Fetch multiple regions around the Middle East theater + nearby traffic hubs
+    const devRegions = [
+      { lat: 25, lon: 55 },   // UAE/Dubai (dense traffic)
+      { lat: 29, lon: 48 },   // Kuwait/Bahrain/Qatar
+      { lat: 21, lon: 57 },   // Oman/Strait of Hormuz
+      { lat: 24, lon: 45 },   // Saudi Arabia
+      { lat: 33, lon: 44 },   // Iraq/Baghdad
+      { lat: 37, lon: 35 },   // Turkey
+      { lat: 32, lon: 53 },   // Iran (will be 0 if airspace closed)
+      { lat: 30, lon: 35 },   // Jordan/Israel
+    ];
+    
+    const allAircraft: any[] = [];
+    const seen = new Set<string>();
+    let now = Date.now() / 1000;
+    
+    const results = await Promise.allSettled(
+      devRegions.map(async (r) => {
+        const url = `/adsbfi/api/v2/lat/${r.lat}/lon/${r.lon}/dist/250`;
+        const resp = await fetch(url);
+        if (!resp.ok) return null;
+        return resp.json();
+      })
+    );
+    
+    for (const result of results) {
+      if (result.status !== 'fulfilled' || !result.value) continue;
+      const data = result.value;
+      if (data.now) now = data.now;
+      const aircraft = data.aircraft || data.ac || [];
+      for (const ac of aircraft) {
+        const id = ac.hex || ac.icao24;
+        if (id && !seen.has(id)) {
+          seen.add(id);
+          allAircraft.push(ac);
+        }
+      }
+    }
+    
+    console.log(`[WORLDVIEW] Dev flights: ${allAircraft.length} from ${devRegions.length} regions`);
+    return adsbfiToOpenSky({ now, aircraft: allAircraft });
   }
 
   // Production: fetch all regions in parallel for global coverage

@@ -157,7 +157,7 @@ export class FlightTracker {
             }
           } else {
             if (entity.billboard) {
-              entity.billboard.color = new Cesium.ConstantProperty(Cesium.Color.fromCssColorString(altitudeToColor(alt)));
+              entity.billboard.color = new Cesium.ConstantProperty(Cesium.Color.fromCssColorString('#4dabf7'));
               entity.billboard.scale = new Cesium.ConstantProperty(1.0);
             }
           }
@@ -284,7 +284,8 @@ export class FlightTracker {
           const milColor = isMil
             ? Cesium.Color.fromCssColorString(MILITARY_CATEGORY_COLORS[cls.category])
             : null;
-          const color = milColor || Cesium.Color.fromCssColorString(altitudeToColor(alt));
+          const COMMERCIAL_COLOR = Cesium.Color.fromCssColorString('#4dabf7');
+          const color = milColor || COMMERCIAL_COLOR;
           const heading = flight.trueTrack || 0;
           const hasSquawkAlert = checkSquawk(flight.squawk) !== null;
           const icon = isMil ? MILITARY_CATEGORY_SVGS[cls.category] : (hasSquawkAlert ? FLAGGED_SVG : AIRCRAFT_SVG);
@@ -431,7 +432,7 @@ export class FlightTracker {
 
     const trailColor = isMil
       ? Cesium.Color.fromCssColorString(MILITARY_CATEGORY_COLORS[category]).withAlpha(0.4)
-      : Cesium.Color.fromCssColorString(altitudeToColor(alt)).withAlpha(0.3);
+      : Cesium.Color.fromCssColorString('#4dabf7').withAlpha(0.3);
 
     if (this.trailEntities.has(icao)) {
       const trail = this.trailEntities.get(icao)!;

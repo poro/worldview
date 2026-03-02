@@ -8,8 +8,8 @@ export const SATELLITE_POSITION_UPDATE_INTERVAL = 2000;
 export const DATA_AGE_UPDATE_INTERVAL = 1000;
 
 // --- Flight Config ---
-export const FLIGHT_TRAIL_MAX_POINTS = 8;
-export const FLIGHT_TRAIL_WIDTH = 1.5;
+export const FLIGHT_TRAIL_MAX_POINTS = 20;
+export const FLIGHT_TRAIL_WIDTH = 2;
 
 // --- Satellite Config ---
 export const SAT_MAX_PER_CATEGORY: Record<string, number> = {
@@ -54,15 +54,15 @@ export const TRAFFIC_ROAD_WEIGHTS: Record<string, number> = {
 };
 
 // --- Entity Visual Config ---
-export const AIRCRAFT_ICON_SIZE = 44;
-export const AIRCRAFT_ICON_SIZE_MILITARY = 52;
+export const AIRCRAFT_ICON_SIZE = 24;
+export const AIRCRAFT_ICON_SIZE_MILITARY = 28;
 export const AIRCRAFT_LABEL_FONT = '11px JetBrains Mono';
 export const SAT_LABEL_FONT = '10px JetBrains Mono';
 export const EQ_LABEL_FONT = '10px JetBrains Mono';
 
 // --- Scale by Distance ---
-export const AIRCRAFT_SCALE_NEAR = 1.8;
-export const AIRCRAFT_SCALE_FAR = 0.7;
+export const AIRCRAFT_SCALE_NEAR = 1.2;
+export const AIRCRAFT_SCALE_FAR = 0.35;
 export const AIRCRAFT_SCALE_NEAR_DIST = 1e4;
 export const AIRCRAFT_SCALE_FAR_DIST = 5e7;
 export const AIRCRAFT_TRANS_NEAR_DIST = 1e4;

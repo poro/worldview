@@ -84,7 +84,7 @@ export class GpsInterferenceLayer {
           const t = Date.now() % GPS_PULSE_PERIOD;
           const phase = Math.sin((t / GPS_PULSE_PERIOD) * Math.PI * 2);
           const scale = 0.98 + 0.02 * phase;
-          return radiusMeters * scale;
+          return Math.max(1, radiusMeters * scale);
         }, false);
 
         const typeIcon = zone.type === 'jamming' ? 'JAM' : zone.type === 'spoofing' ? 'SPOOF' : 'JAM+SPOOF';

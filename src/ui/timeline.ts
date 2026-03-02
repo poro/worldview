@@ -443,8 +443,6 @@ export class Timeline {
         e.stopPropagation();
         const el = marker as HTMLElement;
         const time = new Date(el.dataset.eventTime!);
-        const lat = parseFloat(el.dataset.eventLat!);
-        const lon = parseFloat(el.dataset.eventLon!);
 
         // Seek to event time
         this.timeController.seekTo(time);

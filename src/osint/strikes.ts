@@ -101,7 +101,7 @@ export class StrikeLayer {
           const t = Date.now() % STRIKE_PULSE_PERIOD;
           const phase = Math.sin((t / STRIKE_PULSE_PERIOD) * Math.PI * 2);
           const scale = STRIKE_PULSE_MIN_SCALE + (STRIKE_PULSE_MAX_SCALE - STRIKE_PULSE_MIN_SCALE) * (0.5 + phase * 0.5);
-          return baseRadius * scale;
+          return Math.max(1, baseRadius * scale);
         }, false);
 
         // Pulsing outline alpha

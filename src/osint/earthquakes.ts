@@ -93,7 +93,7 @@ export class EarthquakeLayer {
           const t = Date.now() % EQ_PULSE_PERIOD;
           const phase = Math.sin((t / EQ_PULSE_PERIOD) * Math.PI * 2);
           const scale = EQ_PULSE_MIN_SCALE + (EQ_PULSE_MAX_SCALE - EQ_PULSE_MIN_SCALE) * (0.5 + phase * 0.5);
-          return baseRadius * scale;
+          return Math.max(1, baseRadius * scale);
         }, false);
 
         // Pulsing outline alpha

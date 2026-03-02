@@ -21,6 +21,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/usgs/, ''),
       },
+      '/adsbfi': {
+        target: 'https://opendata.adsb.fi',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/adsbfi/, ''),
+      },
     },
   },
 });

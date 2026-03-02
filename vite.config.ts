@@ -4,6 +4,7 @@ import cesium from 'vite-plugin-cesium';
 export default defineConfig({
   plugins: [cesium()],
   server: {
+    allowedHosts: ['worldview.game-agents.com'],
     proxy: {
       '/opensky': {
         target: 'https://opensky-network.org',

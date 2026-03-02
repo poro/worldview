@@ -15,7 +15,7 @@ export class DetailPanel {
   constructor() {
     this.panel = document.createElement('div');
     this.panel.className = 'hud-element';
-    this.panel.style.cssText = 'position:absolute;top:80px;right:16px;width:300px;max-height:calc(100vh - 120px);overflow-y:auto;display:none;';
+    this.panel.style.cssText = 'position:absolute;top:80px;left:16px;width:300px;max-height:calc(100vh - 120px);overflow-y:auto;display:none;z-index:100;';
     this.panel.innerHTML = `
       <div class="cmd-panel rounded-sm pointer-events-auto">
         <div class="flex items-center justify-between px-4 py-2 border-b border-gray-800/50">

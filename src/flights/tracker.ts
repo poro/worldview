@@ -266,7 +266,8 @@ export class FlightTracker {
         for (const raw of data.states) {
           const flight = parseFlightState(raw as (string | number | boolean | null)[]);
           if (flight.longitude === null || flight.latitude === null) continue;
-          if (flight.onGround) continue;
+          // Show ground aircraft too (dimmed) — important when airborne traffic is sparse
+          // if (flight.onGround) continue;
 
           currentIcaos.add(flight.icao24);
           this.flights.set(flight.icao24, flight);

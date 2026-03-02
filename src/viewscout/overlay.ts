@@ -22,8 +22,9 @@ export function renderViewshedOverlay(viewer: Cesium.Viewer, result: ViewshedRes
         : Cesium.Color.fromCssColorString('#ff3d3d').withAlpha(0.1);
 
       // Size scales with distance
-      const semiMajor = (result.rays[0].samples[1]?.distance - result.rays[0].samples[0]?.distance || 250) * 0.5;
-      const semiMinor = semiMajor * Math.max(0.5, step / 10);
+      const rawMajor = (result.rays[0].samples[1]?.distance - result.rays[0].samples[0]?.distance || 250) * 0.5;
+      const semiMajor = Math.max(1, Math.abs(rawMajor) || 125);
+      const semiMinor = Math.max(1, Math.min(semiMajor, semiMajor * Math.min(1.0, Math.max(0.5, step / 10))));
 
       const entity = viewer.entities.add({
         position: Cesium.Cartesian3.fromDegrees(sample.lon, sample.lat, sample.elevation + 1),

@@ -153,7 +153,7 @@ export class StrikeLayer {
         // Blast radius concentric rings
         const blastRings: Cesium.Entity[] = [];
         for (let i = 1; i <= STRIKE_BLAST_RING_COUNT; i++) {
-          const ringRadius = strike.blast_radius_m * this._blastRadiusScale * (i / STRIKE_BLAST_RING_COUNT);
+          const ringRadius = Math.max(1, (strike.blast_radius_m || 500) * this._blastRadiusScale * (i / STRIKE_BLAST_RING_COUNT));
           const ringAlpha = STRIKE_BLAST_RING_ALPHA * (STRIKE_BLAST_RING_COUNT - i + 1);
           const ring = this.viewer.entities.add({
             position: Cesium.Cartesian3.fromDegrees(strike.lon, strike.lat, 0),

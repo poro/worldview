@@ -79,13 +79,8 @@ export class GpsInterferenceLayer {
           return baseColor.withAlpha(a);
         }, false);
 
-        // Pulsing radius for active-zone feel
-        const pulsingRadius = new Cesium.CallbackProperty(() => {
-          const t = Date.now() % GPS_PULSE_PERIOD;
-          const phase = Math.sin((t / GPS_PULSE_PERIOD) * Math.PI * 2);
-          const scale = 0.98 + 0.02 * phase;
-          return Math.max(1, radiusMeters * scale);
-        }, false);
+        // Fixed radius (no pulsing — prevents Cesium geometry crash)
+        const fixedRadius = Math.max(100, radiusMeters);
 
         const typeIcon = zone.type === 'jamming' ? 'JAM' : zone.type === 'spoofing' ? 'SPOOF' : 'JAM+SPOOF';
         const sevLabel = zone.severity.toUpperCase();
@@ -93,8 +88,8 @@ export class GpsInterferenceLayer {
         const entity = this.viewer.entities.add({
           position: Cesium.Cartesian3.fromDegrees(zone.lon, zone.lat, 0),
           ellipse: {
-            semiMajorAxis: pulsingRadius,
-            semiMinorAxis: pulsingRadius,
+            semiMajorAxis: fixedRadius,
+            semiMinorAxis: fixedRadius,
             material: baseColor.withAlpha(GPS_FILL_ALPHA),
             outline: true,
             outlineColor: pulsingOutline as unknown as Cesium.Property,

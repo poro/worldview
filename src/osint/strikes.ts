@@ -1,8 +1,6 @@
 import * as Cesium from 'cesium';
 import {
   STRIKE_PULSE_PERIOD,
-  STRIKE_PULSE_MIN_SCALE,
-  STRIKE_PULSE_MAX_SCALE,
   STRIKE_ELLIPSE_BASE,
   STRIKE_LABEL_FONT,
   STRIKE_BLAST_RING_COUNT,
@@ -95,14 +93,8 @@ export class StrikeLayer {
           ? Cesium.Color.fromCssColorString(COLORS.strikeMissile)
           : Cesium.Color.fromCssColorString(COLORS.strikeDrone);
 
-        // Pulsing ring
-        const baseRadius = STRIKE_ELLIPSE_BASE;
-        const pulsingRadius = new Cesium.CallbackProperty(() => {
-          const t = Date.now() % STRIKE_PULSE_PERIOD;
-          const phase = Math.sin((t / STRIKE_PULSE_PERIOD) * Math.PI * 2);
-          const scale = STRIKE_PULSE_MIN_SCALE + (STRIKE_PULSE_MAX_SCALE - STRIKE_PULSE_MIN_SCALE) * (0.5 + phase * 0.5);
-          return Math.max(1, baseRadius * scale);
-        }, false);
+        // Fixed ring radius (no pulsing — prevents Cesium geometry crash)
+        const baseRadius = Math.max(100, STRIKE_ELLIPSE_BASE);
 
         // Pulsing outline alpha
         const pulsingOutlineColor = new Cesium.CallbackProperty(() => {
@@ -124,8 +116,8 @@ export class StrikeLayer {
             heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
           },
           ellipse: {
-            semiMajorAxis: pulsingRadius,
-            semiMinorAxis: pulsingRadius,
+            semiMajorAxis: baseRadius,
+            semiMinorAxis: baseRadius,
             material: Cesium.Color.fromCssColorString(COLORS.strikePulse).withAlpha(0.08),
             outline: true,
             outlineColor: pulsingOutlineColor as unknown as Cesium.Property,

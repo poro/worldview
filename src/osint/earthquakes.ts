@@ -1,5 +1,5 @@
 import * as Cesium from 'cesium';
-import { EQ_ELLIPSE_SCALE, EQ_PULSE_MIN_SCALE, EQ_PULSE_MAX_SCALE, EQ_PULSE_PERIOD, EQ_LABEL_FONT, COLORS } from '../config';
+import { EQ_ELLIPSE_SCALE, EQ_PULSE_PERIOD, EQ_LABEL_FONT, COLORS } from '../config';
 
 export interface Earthquake {
   id: string;
@@ -87,14 +87,8 @@ export class EarthquakeLayer {
           ? Cesium.Color.ORANGE.withAlpha(alpha)
           : Cesium.Color.YELLOW.withAlpha(alpha);
 
-        // Pulsing ellipse using CallbackProperty
-        const baseRadius = eq.magnitude * EQ_ELLIPSE_SCALE;
-        const pulsingRadius = new Cesium.CallbackProperty(() => {
-          const t = Date.now() % EQ_PULSE_PERIOD;
-          const phase = Math.sin((t / EQ_PULSE_PERIOD) * Math.PI * 2);
-          const scale = EQ_PULSE_MIN_SCALE + (EQ_PULSE_MAX_SCALE - EQ_PULSE_MIN_SCALE) * (0.5 + phase * 0.5);
-          return Math.max(1, baseRadius * scale);
-        }, false);
+        // Fixed ellipse radius (no pulsing — prevents Cesium geometry crash)
+        const baseRadius = Math.max(100, eq.magnitude * EQ_ELLIPSE_SCALE);
 
         // Pulsing outline alpha
         const pulsingOutlineColor = new Cesium.CallbackProperty(() => {
@@ -114,8 +108,8 @@ export class EarthquakeLayer {
             heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
           },
           ellipse: {
-            semiMajorAxis: pulsingRadius,
-            semiMinorAxis: pulsingRadius,
+            semiMajorAxis: baseRadius,
+            semiMinorAxis: baseRadius,
             material: Cesium.Color.RED.withAlpha(0.08),
             outline: true,
             outlineColor: pulsingOutlineColor as unknown as Cesium.Property,

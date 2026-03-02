@@ -18,6 +18,7 @@ import { StrikeLayer } from './osint/strikes';
 import { GpsInterferenceLayer } from './osint/gps-interference';
 import { AirspaceLayer } from './osint/airspace';
 import { ShippingLayer } from './osint/shipping';
+import { ZoomControls } from './ui/zoom-controls';
 
 // Boot sequence
 console.log(
@@ -41,6 +42,7 @@ const strikeLayer = new StrikeLayer(viewer);
 const gpsLayer = new GpsInterferenceLayer(viewer);
 const airspaceLayer = new AirspaceLayer(viewer);
 const shippingLayer = new ShippingLayer(viewer);
+new ZoomControls(viewer);
 const hud = new HUD(viewer);
 const detailPanel = new DetailPanel();
 const effectsPanel = new EffectsPanel();

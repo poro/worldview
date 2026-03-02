@@ -240,3 +240,79 @@
 #ui-overlay {
   overflow: hidden;
 }
+
+/* Zoom Controls */
+.wv-zoom-controls {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 100;
+  pointer-events: none;
+}
+.wv-zoom-controls > * {
+  pointer-events: auto;
+}
+.wv-zoom-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-self: flex-end;
+}
+.wv-zoom-btn {
+  width: 44px;
+  height: 44px;
+  background: rgba(10, 10, 15, 0.85);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  color: #00ff88;
+  font-size: 22px;
+  font-weight: bold;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  border-radius: 6px;
+  backdrop-filter: blur(8px);
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wv-zoom-btn:hover {
+  background: rgba(0, 255, 136, 0.15);
+  border-color: #00ff88;
+  transform: scale(1.05);
+}
+.wv-zoom-btn:active {
+  transform: scale(0.95);
+  background: rgba(0, 255, 136, 0.25);
+}
+.wv-zoom-presets {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 200px;
+}
+.wv-zoom-preset {
+  width: 36px;
+  height: 36px;
+  background: rgba(10, 10, 15, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wv-zoom-preset:hover {
+  background: rgba(0, 255, 136, 0.15);
+  border-color: rgba(0, 255, 136, 0.5);
+  transform: scale(1.1);
+}
+.wv-zoom-preset:active {
+  transform: scale(0.9);
+}

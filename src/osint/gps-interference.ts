@@ -3,7 +3,6 @@ import {
   GPS_PULSE_PERIOD,
   GPS_EDGE_PULSE_MIN_ALPHA,
   GPS_EDGE_PULSE_MAX_ALPHA,
-  GPS_FILL_ALPHA,
   GPS_LABEL_FONT,
   COLORS,
 } from '../config';
@@ -64,6 +63,26 @@ export class GpsInterferenceLayer {
     }
   }
 
+  /** Create a canvas-based radial gradient heatmap texture */
+  private createHeatmapImage(severity: GpsSeverity): string {
+    const size = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+
+    const colorStr = this.severityColor(severity);
+    const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    gradient.addColorStop(0, colorStr + 'aa');
+    gradient.addColorStop(0.3, colorStr + '66');
+    gradient.addColorStop(0.6, colorStr + '33');
+    gradient.addColorStop(1, colorStr + '00');
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+    return canvas.toDataURL();
+  }
+
   private render() {
     this.viewer.entities.suspendEvents();
     try {
@@ -79,18 +98,23 @@ export class GpsInterferenceLayer {
           return baseColor.withAlpha(a);
         }, false);
 
-        // Fixed radius (no pulsing — prevents Cesium geometry crash)
         const fixedRadius = Math.max(100, radiusMeters);
 
         const typeIcon = zone.type === 'jamming' ? 'JAM' : zone.type === 'spoofing' ? 'SPOOF' : 'JAM+SPOOF';
         const sevLabel = zone.severity.toUpperCase();
+
+        // Use canvas heatmap gradient as material
+        const heatmapImage = this.createHeatmapImage(zone.severity);
 
         const entity = this.viewer.entities.add({
           position: Cesium.Cartesian3.fromDegrees(zone.lon, zone.lat, 0),
           ellipse: {
             semiMajorAxis: fixedRadius,
             semiMinorAxis: fixedRadius,
-            material: baseColor.withAlpha(GPS_FILL_ALPHA),
+            material: new Cesium.ImageMaterialProperty({
+              image: heatmapImage,
+              transparent: true,
+            }),
             outline: true,
             outlineColor: pulsingOutline as unknown as Cesium.Property,
             outlineWidth: 2,
@@ -103,6 +127,9 @@ export class GpsInterferenceLayer {
             outlineColor: Cesium.Color.BLACK,
             outlineWidth: 2,
             style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+            backgroundColor: Cesium.Color.fromCssColorString('#0a0a0f').withAlpha(0.5),
+            showBackground: true,
+            backgroundPadding: new Cesium.Cartesian2(6, 4),
             pixelOffset: new Cesium.Cartesian2(0, 0),
             scaleByDistance: new Cesium.NearFarScalar(5e5, 1.0, 2e7, 0.3),
             distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 1.5e7),

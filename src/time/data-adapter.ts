@@ -25,7 +25,7 @@ export interface TimelineEvent {
   lat: number;
   lon: number;
   title: string;
-  type: 'strike' | 'diplomatic' | 'military_movement' | 'incident';
+  type: string;
   description: string;
 }
 

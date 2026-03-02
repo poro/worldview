@@ -21,7 +21,15 @@ import { ShippingLayer } from './osint/shipping';
 import { ZoomControls } from './ui/zoom-controls';
 import { TimeController } from './time/controller';
 import { Timeline } from './ui/timeline';
-import { SnapshotAPIAdapter } from './time/data-adapter';
+import { SnapshotAPIAdapter, TimelineEvent } from './time/data-adapter';
+import { CountryLayer } from './layers/countries';
+import { InternetBlackoutLayer } from './layers/internet-blackout';
+import { EventCardLayer } from './layers/event-cards';
+import { FilterBar } from './ui/filter-bar';
+import { ViewModeManager } from './ui/view-modes';
+import { RightPanel } from './ui/right-panel';
+import { AircraftPopup } from './ui/aircraft-popup';
+import { CONFLICT_EVENTS } from './data/events';
 
 // Boot sequence
 console.log(
@@ -46,6 +54,12 @@ const gpsLayer = new GpsInterferenceLayer(viewer);
 const airspaceLayer = new AirspaceLayer(viewer);
 const shippingLayer = new ShippingLayer(viewer);
 new ZoomControls(viewer);
+
+// New visual overhaul layers
+const countryLayer = new CountryLayer(viewer);
+const internetBlackoutLayer = new InternetBlackoutLayer(viewer);
+const eventCardLayer = new EventCardLayer(viewer);
+const viewModeManager = new ViewModeManager();
 
 // Time Controller + Timeline — wire to all data layers
 const timeController = new TimeController();
@@ -190,6 +204,74 @@ timeline = new Timeline(timeController, {
 }, eventAdapter);
 timeline.setRange(new Date('2026-02-28T00:00:00Z'), new Date());
 
+// Load conflict events into timeline
+const conflictTimelineEvents: TimelineEvent[] = CONFLICT_EVENTS.map(evt => ({
+  time: new Date(evt.time),
+  lat: evt.lat,
+  lon: evt.lon,
+  title: evt.title,
+  type: evt.type,
+  description: evt.description,
+}));
+timeline.setEvents(conflictTimelineEvents);
+
+// Aircraft hover popup
+const aircraftPopup = new AircraftPopup(viewer);
+aircraftPopup.setFlightDataProvider((icao) => flightTracker.getFlightData(icao));
+
+// Filter bar (bottom pills)
+const filterBar = new FilterBar({
+  onToggle: (id, active) => {
+    switch (id) {
+      case 'commercial': flightTracker.toggle(); break;
+      case 'military': flightTracker.toggleMilitary(); break;
+      case 'gps-jamming': gpsLayer.toggle(); break;
+      case 'ground-truth': eventCardLayer.toggle(); break;
+      case 'imaging-sats': satRenderer.toggle(); break;
+      case 'maritime': maritimeTracker.toggle(); break;
+      case 'airspace': airspaceLayer.toggle(); break;
+      case 'blackout': internetBlackoutLayer.toggle(); break;
+      case 'borders': countryLayer.toggle(); break;
+      // Event type filters
+      case 'evt-kinetic':
+      case 'evt-retaliation':
+      case 'evt-civilian':
+      case 'evt-war':
+      case 'evt-infrastructure':
+      case 'evt-escalation':
+        // Filter event cards by active event types
+        break;
+      default:
+        console.log(`[FilterBar] Unhandled toggle: ${id} → ${active}`);
+    }
+  },
+});
+
+// Right panel
+const rightPanel = new RightPanel({
+  onViewModeChange: (_mode) => {
+    // View mode already applied by ViewModeManager inside the panel
+  },
+  onToggleHUD: () => hud.toggle(),
+  onToggleFlights: () => {
+    flightTracker.toggle();
+    controls.setLayerState('flights', flightTracker.visible);
+  },
+  onToggleSatellites: () => {
+    satRenderer.toggle();
+    controls.setLayerState('satellites', satRenderer.visible);
+  },
+  onCleanUI: () => {
+    hud.toggle();
+    controls.showToast('CLEAN UI');
+  },
+}, viewModeManager);
+
+// Suppress unused variable warnings
+void filterBar;
+void rightPanel;
+void aircraftPopup;
+
 // Entity picking
 const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 handler.setInputAction((click: { position: Cesium.Cartesian2 }) => {
@@ -204,6 +286,7 @@ handler.setInputAction((click: { position: Cesium.Cartesian2 }) => {
     if (gpsLayer.handlePick(picked)) return;
     if (airspaceLayer.handlePick(picked)) return;
     if (shippingLayer.handlePick(picked)) return;
+    if (eventCardLayer.handlePick(picked)) return;
   }
   // Clicked empty space — deselect
   detailPanel.hide();
@@ -480,6 +563,22 @@ async function boot() {
     shippingLayer.load();
     console.log('[WORLDVIEW] Shipping ✓');
   } catch (e) { console.warn('[WORLDVIEW] Shipping failed:', e); }
+
+  // Load new visual overhaul layers
+  try {
+    await countryLayer.load();
+    console.log('[WORLDVIEW] Country Borders ✓');
+  } catch (e) { console.warn('[WORLDVIEW] Country Borders failed:', e); }
+
+  try {
+    internetBlackoutLayer.load();
+    console.log('[WORLDVIEW] Internet Blackout ✓');
+  } catch (e) { console.warn('[WORLDVIEW] Internet Blackout failed:', e); }
+
+  try {
+    eventCardLayer.load();
+    console.log('[WORLDVIEW] Event Cards ✓');
+  } catch (e) { console.warn('[WORLDVIEW] Event Cards failed:', e); }
 
   console.log('[WORLDVIEW] All systems online.');
 }

@@ -54,8 +54,8 @@ export const TRAFFIC_ROAD_WEIGHTS: Record<string, number> = {
 };
 
 // --- Entity Visual Config ---
-export const AIRCRAFT_ICON_SIZE = 20;
-export const AIRCRAFT_ICON_SIZE_MILITARY = 22;
+export const AIRCRAFT_ICON_SIZE = 32;
+export const AIRCRAFT_ICON_SIZE_MILITARY = 38;
 export const AIRCRAFT_LABEL_FONT = '11px JetBrains Mono';
 export const SAT_LABEL_FONT = '10px JetBrains Mono';
 export const EQ_LABEL_FONT = '10px JetBrains Mono';

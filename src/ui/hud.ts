@@ -27,6 +27,8 @@ export class HUD {
     loadingQuakes: HTMLElement;
     loadingVessels: HTMLElement;
     milBreakdown: HTMLElement;
+    recDot: HTMLElement;
+    classificationBanner: HTMLElement;
   };
 
   constructor(viewer: Cesium.Viewer) {
@@ -118,6 +120,15 @@ export class HUD {
   }
 
   private build() {
+    // Classification banner (top center)
+    const banner = this.createElement('hud-element', `
+      <div class="text-center py-1 px-6" style="background:rgba(255,61,61,0.15);border:1px solid rgba(255,61,61,0.3);border-radius:2px;">
+        <span id="hud-classification" class="text-[9px] tracking-[0.25em] text-red-400 font-semibold" style="text-shadow:0 0 6px rgba(255,61,61,0.5)">TOP SECRET // SI-TK // NOFORN</span>
+      </div>
+    `);
+    banner.style.cssText = 'position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:60;';
+    this.container.appendChild(banner);
+
     // Top-left: WORLDVIEW branding + time
     const topLeft = this.createElement('hud-element', `
       <div class="cmd-panel px-4 py-3 rounded-sm pointer-events-auto" style="min-width: 260px">
@@ -138,17 +149,18 @@ export class HUD {
         </div>
       </div>
     `);
-    topLeft.style.cssText = 'position:absolute;top:16px;left:16px;';
+    topLeft.style.cssText = 'position:absolute;top:36px;left:16px;';
     this.container.appendChild(topLeft);
 
-    // Top-right: Filter + camera
+    // Top-right: REC indicator + Filter + camera
     const topRight = this.createElement('hud-element', `
       <div class="cmd-panel px-4 py-3 rounded-sm pointer-events-auto" style="min-width: 200px">
-        <div class="space-y-1">
-          <div class="flex justify-between">
-            <span class="data-label">FILTER</span>
-            <span class="data-value text-cyan-400 glow-cyan text-xs" id="hud-filter">STANDARD</span>
-          </div>
+        <div class="flex items-center gap-2 mb-2">
+          <div id="hud-rec-dot" class="w-2 h-2 rounded-full bg-red-500 pulse-dot" style="animation:rec-blink 1s infinite"></div>
+          <span class="text-[10px] tracking-[0.2em] text-red-400 font-semibold">REC</span>
+          <span class="text-[9px] text-gray-600 ml-auto" id="hud-filter">STANDARD</span>
+        </div>
+        <div class="border-t border-gray-800/50 pt-2 space-y-1">
           <div class="flex justify-between">
             <span class="data-label">CAM ALT</span>
             <span class="data-value text-xs" id="hud-cam-alt">---</span>
@@ -160,7 +172,7 @@ export class HUD {
         </div>
       </div>
     `);
-    topRight.style.cssText = 'position:absolute;top:16px;right:16px;';
+    topRight.style.cssText = 'position:absolute;top:36px;right:16px;';
     this.container.appendChild(topRight);
 
     // Bottom bar: stats with loading indicators
@@ -252,6 +264,8 @@ export class HUD {
       loadingQuakes: document.getElementById('loading-quakes')!,
       loadingVessels: document.getElementById('loading-vessels')!,
       milBreakdown: document.getElementById('hud-mil-breakdown')!,
+      recDot: document.getElementById('hud-rec-dot')!,
+      classificationBanner: document.getElementById('hud-classification')!,
     };
   }
 

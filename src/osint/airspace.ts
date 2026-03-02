@@ -3,7 +3,6 @@ import {
   AIRSPACE_FILL_ALPHA,
   AIRSPACE_OUTLINE_ALPHA,
   AIRSPACE_OUTLINE_WIDTH,
-  AIRSPACE_LABEL_FONT,
   COLORS,
 } from '../config';
 import { AIRSPACE_ZONES, AirspaceZone, AirspaceStatus } from '../data/airspace';
@@ -110,15 +109,18 @@ export class AirspaceLayer {
           },
           position: Cesium.Cartesian3.fromDegrees(cLon, cLat, 0),
           label: {
-            text: `${zone.country}\n${this.statusLabel(zone.status)} \u2022 ${zone.notam_id}\nFrom: ${startStr}`,
-            font: AIRSPACE_LABEL_FONT,
+            text: `${zone.country} AIRSPACE ${this.statusLabel(zone.status)}\n${zone.notam_id}\nFrom: ${startStr}`,
+            font: 'bold 13px JetBrains Mono',
             fillColor: baseColor.withAlpha(0.9),
             outlineColor: Cesium.Color.BLACK,
-            outlineWidth: 2,
+            outlineWidth: 3,
             style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+            backgroundColor: Cesium.Color.fromCssColorString('#0a0a0f').withAlpha(0.6),
+            showBackground: true,
+            backgroundPadding: new Cesium.Cartesian2(8, 5),
             pixelOffset: new Cesium.Cartesian2(0, 0),
-            scaleByDistance: new Cesium.NearFarScalar(5e5, 1.0, 2e7, 0.25),
-            distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 1e7),
+            scaleByDistance: new Cesium.NearFarScalar(5e5, 1.0, 1.5e7, 0.3),
+            distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 1.2e7),
           },
           properties: {
             type: 'airspace',

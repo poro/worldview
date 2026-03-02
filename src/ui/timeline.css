@@ -359,6 +359,55 @@
   box-shadow: 0 0 12px rgba(255, 255, 0, 0.8);
 }
 
+/* Conflict event types */
+.timeline-event-marker.kinetic {
+  background: #ff3d3d;
+  box-shadow: 0 0 6px rgba(255, 61, 61, 0.6);
+}
+.timeline-event-marker.kinetic:hover {
+  box-shadow: 0 0 12px rgba(255, 61, 61, 0.8);
+}
+
+.timeline-event-marker.retaliation {
+  background: #ffb300;
+  box-shadow: 0 0 6px rgba(255, 179, 0, 0.6);
+}
+.timeline-event-marker.retaliation:hover {
+  box-shadow: 0 0 12px rgba(255, 179, 0, 0.8);
+}
+
+.timeline-event-marker.civilian_impact {
+  background: #ff8c00;
+  box-shadow: 0 0 6px rgba(255, 140, 0, 0.6);
+}
+.timeline-event-marker.civilian_impact:hover {
+  box-shadow: 0 0 12px rgba(255, 140, 0, 0.8);
+}
+
+.timeline-event-marker.infrastructure {
+  background: #ff6600;
+  box-shadow: 0 0 6px rgba(255, 102, 0, 0.6);
+}
+.timeline-event-marker.infrastructure:hover {
+  box-shadow: 0 0 12px rgba(255, 102, 0, 0.8);
+}
+
+.timeline-event-marker.escalation {
+  background: #ff00ff;
+  box-shadow: 0 0 6px rgba(255, 0, 255, 0.6);
+}
+.timeline-event-marker.escalation:hover {
+  box-shadow: 0 0 12px rgba(255, 0, 255, 0.8);
+}
+
+.timeline-event-marker.maritime {
+  background: #00e5ff;
+  box-shadow: 0 0 6px rgba(0, 229, 255, 0.6);
+}
+.timeline-event-marker.maritime:hover {
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.8);
+}
+
 /* Event tooltip */
 .timeline-event-tooltip {
   position: absolute;

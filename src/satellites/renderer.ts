@@ -26,6 +26,7 @@ export class SatelliteRenderer {
   private tles: Map<string, TLERecord[]> = new Map();
   private entities: Map<string, Cesium.Entity> = new Map();
   private orbitEntities: Map<string, Cesium.Entity> = new Map();
+  private footprintEntities: Map<string, Cesium.Entity> = new Map();
   private animInterval: ReturnType<typeof setInterval> | null = null;
   private _visible: boolean = true;
   private _activeCategories: Set<string> = new Set(['stations', 'starlink', 'military', 'gps', 'weather']);
@@ -84,6 +85,7 @@ export class SatelliteRenderer {
     this._visible = !this._visible;
     this.entities.forEach((e) => (e.show = this._visible));
     this.orbitEntities.forEach((e) => (e.show = this._visible));
+    this.footprintEntities.forEach((e) => (e.show = this._visible));
   }
 
   toggleCategory(category: string) {
@@ -235,6 +237,26 @@ export class SatelliteRenderer {
         });
 
         this.entities.set(key, entity);
+
+        // Add footprint lines for imaging/military/ISR satellites (not starlink)
+        if (category === 'military' || (category === 'stations' && tle.name.includes('ISS'))) {
+          const footprintKey = `fp-${key}`;
+          if (!this.footprintEntities.has(footprintKey)) {
+            const fpEntity = this.viewer.entities.add({
+              polyline: {
+                positions: [
+                  Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, pos.alt * 1000),
+                  Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, 0),
+                ],
+                width: 1,
+                material: Cesium.Color.fromCssColorString('#00e5ff').withAlpha(0.15),
+              },
+              properties: { type: 'sat-footprint', noradId: pos.noradId },
+              show: this._visible,
+            });
+            this.footprintEntities.set(footprintKey, fpEntity);
+          }
+        }
       }
     } finally {
       this.viewer.entities.resumeEvents();
@@ -256,7 +278,15 @@ export class SatelliteRenderer {
     } finally {
       this.viewer.entities.resumeEvents();
     }
-    keysToRemove.forEach((k) => this.entities.delete(k));
+    keysToRemove.forEach((k) => {
+      this.entities.delete(k);
+      const fpKey = `fp-${k}`;
+      const fpEntity = this.footprintEntities.get(fpKey);
+      if (fpEntity) {
+        this.viewer.entities.remove(fpEntity);
+        this.footprintEntities.delete(fpKey);
+      }
+    });
     this.onCountUpdate?.(this.entities.size);
   }
 
@@ -271,6 +301,15 @@ export class SatelliteRenderer {
         const entity = this.entities.get(key);
         if (entity) {
           entity.position = Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, pos.alt * 1000) as unknown as Cesium.PositionProperty;
+        }
+        // Update footprint line positions
+        const fpKey = `fp-${key}`;
+        const fpEntity = this.footprintEntities.get(fpKey);
+        if (fpEntity?.polyline) {
+          fpEntity.polyline.positions = new Cesium.ConstantProperty([
+            Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, pos.alt * 1000),
+            Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, 0),
+          ]);
         }
       }
     }

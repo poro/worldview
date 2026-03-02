@@ -1,7 +1,6 @@
 import * as Cesium from 'cesium';
 import {
   STRIKE_PULSE_PERIOD,
-  STRIKE_ELLIPSE_BASE,
   STRIKE_LABEL_FONT,
   STRIKE_BLAST_RING_COUNT,
   STRIKE_BLAST_RING_ALPHA,
@@ -83,6 +82,18 @@ export class StrikeLayer {
     }
   }
 
+  /** Generate hexagon vertices around a center point */
+  private hexagonPositions(lon: number, lat: number, radiusKm: number): Cesium.Cartesian3[] {
+    const positions: Cesium.Cartesian3[] = [];
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 3) * i - Math.PI / 6;
+      const dLat = (radiusKm / 111.32) * Math.cos(angle);
+      const dLon = (radiusKm / (111.32 * Math.cos(lat * Math.PI / 180))) * Math.sin(angle);
+      positions.push(Cesium.Cartesian3.fromDegrees(lon + dLon, lat + dLat));
+    }
+    return positions;
+  }
+
   private render() {
     this.viewer.entities.suspendEvents();
     try {
@@ -93,35 +104,32 @@ export class StrikeLayer {
           ? Cesium.Color.fromCssColorString(COLORS.strikeMissile)
           : Cesium.Color.fromCssColorString(COLORS.strikeDrone);
 
-        // Fixed ring radius (no pulsing — prevents Cesium geometry crash)
-        const baseRadius = Math.max(100, STRIKE_ELLIPSE_BASE);
-
-        // Pulsing outline alpha
+        // Pulsing outline alpha (only color pulsing — safe)
         const pulsingOutlineColor = new Cesium.CallbackProperty(() => {
           const t = Date.now() % STRIKE_PULSE_PERIOD;
           const phase = Math.sin((t / STRIKE_PULSE_PERIOD) * Math.PI * 2);
-          const a = 0.2 + 0.3 * (0.5 + phase * 0.5);
-          return Cesium.Color.fromCssColorString(COLORS.strikeFlash).withAlpha(a);
+          const a = 0.4 + 0.5 * (0.5 + phase * 0.5);
+          return color.withAlpha(a);
         }, false);
 
         const typeLabel = strike.strike_type.toUpperCase();
 
+        // Scale hexagon size by blast radius
+        const hexRadiusKm = Math.max(5, (strike.blast_radius_m || 500) * this._blastRadiusScale / 1000 * 8);
+        const hexPositions = this.hexagonPositions(strike.lon, strike.lat, hexRadiusKm);
+
+        // Extruded height based on blast radius
+        const extrudedHeight = Math.max(10000, (strike.blast_radius_m || 500) * 25);
+
         const entity = this.viewer.entities.add({
           position: Cesium.Cartesian3.fromDegrees(strike.lon, strike.lat, 0),
-          point: {
-            pixelSize: 12,
-            color: color.withAlpha(0.9),
-            outlineColor: Cesium.Color.fromCssColorString(COLORS.strikeFlash).withAlpha(0.5),
-            outlineWidth: 3,
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          },
-          ellipse: {
-            semiMajorAxis: baseRadius,
-            semiMinorAxis: baseRadius,
-            material: Cesium.Color.fromCssColorString(COLORS.strikePulse).withAlpha(0.08),
+          polygon: {
+            hierarchy: new Cesium.PolygonHierarchy(hexPositions),
+            material: color.withAlpha(0.7),
+            extrudedHeight: extrudedHeight,
+            height: 0,
             outline: true,
             outlineColor: pulsingOutlineColor as unknown as Cesium.Property,
-            height: 0,
           },
           label: {
             text: `${typeLabel} \u2022 ${strike.target_name.split(' ').slice(0, 2).join(' ')}`,
@@ -142,16 +150,15 @@ export class StrikeLayer {
         });
         this.entities.set(strike.id, entity);
 
-        // Blast radius concentric rings
+        // Blast radius concentric hex rings
         const blastRings: Cesium.Entity[] = [];
         for (let i = 1; i <= STRIKE_BLAST_RING_COUNT; i++) {
-          const ringRadius = Math.max(1, (strike.blast_radius_m || 500) * this._blastRadiusScale * (i / STRIKE_BLAST_RING_COUNT));
+          const ringRadiusKm = Math.max(0.1, (strike.blast_radius_m || 500) * this._blastRadiusScale * (i / STRIKE_BLAST_RING_COUNT) / 1000 * 3);
           const ringAlpha = STRIKE_BLAST_RING_ALPHA * (STRIKE_BLAST_RING_COUNT - i + 1);
+          const ringPositions = this.hexagonPositions(strike.lon, strike.lat, ringRadiusKm);
           const ring = this.viewer.entities.add({
-            position: Cesium.Cartesian3.fromDegrees(strike.lon, strike.lat, 0),
-            ellipse: {
-              semiMajorAxis: ringRadius,
-              semiMinorAxis: ringRadius,
+            polygon: {
+              hierarchy: new Cesium.PolygonHierarchy(ringPositions),
               material: color.withAlpha(ringAlpha),
               outline: true,
               outlineColor: color.withAlpha(ringAlpha * 2),

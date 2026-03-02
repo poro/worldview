@@ -241,6 +241,32 @@
   overflow: hidden;
 }
 
+/* ============================
+   CRT SCAN LINE OVERLAY
+   ============================ */
+.crt-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 5;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.03) 0px,
+    rgba(0, 0, 0, 0.03) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: multiply;
+}
+
+.vignette-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 4;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.6) 100%);
+}
+
 /* Zoom Controls */
 .wv-zoom-controls {
   position: fixed;
@@ -315,4 +341,157 @@
 }
 .wv-zoom-preset:active {
   transform: scale(0.9);
+}
+
+/* ============================
+   BOTTOM FILTER BAR
+   ============================ */
+.filter-bar-container {
+  pointer-events: auto;
+}
+.filter-bar-panel {
+  background: rgba(10, 10, 15, 0.95);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(0, 255, 136, 0.15);
+  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.filter-bar-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.filter-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border: 1px solid rgba(100, 100, 120, 0.2);
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: rgba(150, 150, 170, 0.5);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+.filter-pill:hover {
+  border-color: rgba(150, 150, 170, 0.4);
+  color: rgba(200, 200, 220, 0.8);
+}
+.filter-pill.active {
+  border-color: rgba(0, 255, 136, 0.3);
+  color: #e0e0e0;
+}
+.filter-pill.active .filter-pill-dot {
+  box-shadow: 0 0 6px currentColor;
+}
+.filter-pill:not(.active) .filter-pill-dot {
+  opacity: 0.3;
+}
+.filter-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.filter-pill-label {
+  font-size: 9px;
+  letter-spacing: 0.05em;
+}
+
+/* ============================
+   RIGHT PANEL
+   ============================ */
+.right-panel-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 3px;
+  background: transparent;
+  color: #e0e0e0;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  transition: all 0.15s;
+}
+.right-panel-btn:hover {
+  border-color: rgba(0, 255, 136, 0.5);
+  background: rgba(0, 255, 136, 0.08);
+}
+.rp-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.rp-select {
+  background: rgba(20, 20, 30, 0.8);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  border-radius: 3px;
+  color: #00e5ff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 2px 6px;
+  outline: none;
+  cursor: pointer;
+  flex: 1;
+}
+.rp-select:focus {
+  border-color: rgba(0, 229, 255, 0.5);
+}
+.rp-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: #aaa;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.rp-check input {
+  accent-color: #00ff88;
+}
+.clean-ui-btn {
+  color: #ff3d3d;
+  border-color: rgba(255, 61, 61, 0.25);
+  text-align: center;
+  justify-content: center;
+  margin-top: 4px;
+}
+.clean-ui-btn:hover {
+  border-color: rgba(255, 61, 61, 0.5);
+  background: rgba(255, 61, 61, 0.08);
+}
+
+/* ============================
+   AIRCRAFT POPUP
+   ============================ */
+.aircraft-popup .popup-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 1px 0;
+}
+.aircraft-popup .popup-row span:first-child {
+  color: #666;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+.aircraft-popup .popup-row span:last-child {
+  color: #ccc;
+  font-size: 10px;
+}
+
+/* REC indicator blink */
+@keyframes rec-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
 }

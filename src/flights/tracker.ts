@@ -30,7 +30,13 @@ import {
   AIRCRAFT_TRANS_FAR_DIST,
 } from '../config';
 
-const AIRCRAFT_SVG = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M12 2L8 10H2L4 13H8L10 22H14L12 13H20L22 10H16L12 2Z"/></svg>`)}`;
+// Commercial: solid filled light blue airplane (larger)
+const COMMERCIAL_SVG = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><path d="M12 2L8 10H2L4 13H8L10 22H14L12 13H20L22 10H16L12 2Z" fill="#4dabf7" stroke="#2b7ab5" stroke-width="0.5"/></svg>`)}`;
+
+// Flagged/squawk: solid red airplane
+const FLAGGED_SVG = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"><path d="M12 2L8 10H2L4 13H8L10 22H14L12 13H20L22 10H16L12 2Z" fill="#ff4500" stroke="#cc2200" stroke-width="0.5"/></svg>`)}`;
+
+const AIRCRAFT_SVG = COMMERCIAL_SVG;
 
 export interface MilitaryFlightInfo {
   flight: FlightState;
@@ -195,6 +201,14 @@ export class FlightTracker {
     }
   }
 
+  /** Get flight data for popup display */
+  getFlightData(icao: string): { flight: FlightState; milClass?: MilitaryClassification } | null {
+    const flight = this.flights.get(icao);
+    if (!flight) return null;
+    const milClass = this.militaryClassifications.get(icao);
+    return { flight, milClass: milClass?.isMilitary ? milClass : undefined };
+  }
+
   handlePick(pickedObject: { id?: Cesium.Entity }): boolean {
     if (pickedObject?.id?.properties?.icao24) {
       const icao = pickedObject.id.properties.icao24.getValue(Cesium.JulianDate.now());
@@ -271,7 +285,8 @@ export class FlightTracker {
             : null;
           const color = milColor || Cesium.Color.fromCssColorString(altitudeToColor(alt));
           const heading = flight.trueTrack || 0;
-          const icon = isMil ? MILITARY_CATEGORY_SVGS[cls.category] : AIRCRAFT_SVG;
+          const hasSquawkAlert = checkSquawk(flight.squawk) !== null;
+          const icon = isMil ? MILITARY_CATEGORY_SVGS[cls.category] : (hasSquawkAlert ? FLAGGED_SVG : AIRCRAFT_SVG);
 
           // Track position history for trails
           this.trackPosition(flight.icao24, flight.longitude, flight.latitude, alt);

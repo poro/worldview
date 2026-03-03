@@ -8,6 +8,8 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   infrastructure: '#ff6600',
   escalation: '#ff00ff',
   maritime: '#00e5ff',
+  intelligence: '#00ff88',
+  cyber: '#aa00ff',
 };
 
 interface CardState {

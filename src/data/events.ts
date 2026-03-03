@@ -1,6 +1,6 @@
 export interface ConflictEvent {
   id: string;
-  type: 'kinetic' | 'retaliation' | 'civilian_impact' | 'infrastructure' | 'escalation' | 'maritime';
+  type: 'kinetic' | 'retaliation' | 'civilian_impact' | 'infrastructure' | 'escalation' | 'maritime' | 'intelligence' | 'cyber';
   title: string;
   description: string;
   time: string; // ISO
@@ -10,6 +10,20 @@ export interface ConflictEvent {
 }
 
 export const CONFLICT_EVENTS: ConflictEvent[] = [
+
+  // ============ PRE-WAR INTELLIGENCE PREPARATION ============
+
+  { id: 'I-PRE-001', type: 'intelligence', title: 'MOSSAD IRAN PRIORITY DIRECTIVE', time: '2001-03-01T00:00:00Z', lat: 32.07, lon: 34.78, description: 'PM Ariel Sharon directs Mossad leadership to prioritize Iran as primary strategic threat — initiates decades-long intelligence buildup' },
+  { id: 'I-PRE-002', type: 'intelligence', title: 'TEHRAN CAMERA NETWORK COMPROMISED', time: '2022-01-15T00:00:00Z', lat: 35.70, lon: 51.42, description: 'Unit 8200 operatives hack traffic cameras across Tehran — years-long pattern-of-life surveillance begins on high-security compounds near Pasteur Street' },
+  { id: 'I-PRE-003', type: 'intelligence', title: 'OCT 7 CALCULUS SHIFT', time: '2023-10-07T06:30:00Z', lat: 31.50, lon: 34.47, description: 'Hamas attack reshapes Israeli thinking — foreign heads of state no longer off-limits in wartime. Iran identified as ultimate sponsor.' },
+  { id: 'I-PRE-004', type: 'intelligence', title: 'PATTERN OF LIFE COMPLETE', time: '2025-12-01T00:00:00Z', lat: 35.70, lon: 51.42, description: 'Unit 8200 + Mossad complete "pattern of life" analysis on Supreme Leader compound: bodyguard parking locations, daily routines, addresses, routes, schedules, protection assignments mapped via algorithm-processed camera data' },
+
+  // ============ H-HOUR MINUS — Cyber & Electronic Warfare ============
+
+  { id: 'CY-001', type: 'cyber', title: 'US CYBER OPS — RADAR DISRUPTION', time: '2026-02-28T01:30:00Z', lat: 35.69, lon: 51.31, description: 'US cyber operations disrupt Iranian radar and communication capabilities across Tehran air defense network' },
+  { id: 'CY-002', type: 'cyber', title: 'CELL TOWER JAMMING — PASTEUR ST', time: '2026-02-28T01:45:00Z', lat: 35.6985, lon: 51.4215, description: 'Israeli intelligence activates interference on mobile phone tower components near Pasteur Street, Tehran — calls appear busy, security teams cannot receive warnings' },
+  { id: 'I-PRE-005', type: 'intelligence', title: 'HUMINT CONFIRMATION — MEETING ACTIVE', time: '2026-02-28T02:00:00Z', lat: 35.70, lon: 51.42, description: 'US intelligence asset (human source) confirms high-level meeting underway at Khamenei compound — Israeli doctrine requires double verification by senior officers before authorization' },
+
   // ============ DAY 1 — Feb 28, 2026 (H-Hour + Initial Strikes) ============
 
   { id: 'E-001', type: 'escalation', title: 'DEFCON 2 DECLARED', time: '2026-02-28T01:00:00Z', lat: 38.87, lon: -77.06, description: 'US Strategic Command elevates to DEFCON 2 — highest peacetime alert level' },
@@ -19,7 +33,7 @@ export const CONFLICT_EVENTS: ConflictEvent[] = [
   { id: 'K-004', type: 'kinetic', title: 'FORDOW DEEP STRIKE', time: '2026-02-28T02:20:00Z', lat: 34.88, lon: 51.59, description: 'Deep-penetration strike on Fordow facility built inside mountain near Qom' },
   { id: 'K-005', type: 'kinetic', title: 'SHAHRUD MISSILE SITE', time: '2026-02-28T02:22:00Z', lat: 35.24, lon: 52.35, description: 'Strikes on solid-fuel ballistic missile test facility — launch pads destroyed' },
   { id: 'K-006', type: 'kinetic', title: 'PARCHIN COMPLEX', time: '2026-02-28T02:25:00Z', lat: 35.52, lon: 51.77, description: 'Tomahawk cruise missile salvo on Parchin suspected weapons research site' },
-  { id: 'K-007', type: 'kinetic', title: 'SUPREME LEADER COMPOUND', time: '2026-02-28T02:30:00Z', lat: 35.70, lon: 51.42, description: 'F-35I Adir strike package targeting leadership compound in northern Tehran' },
+  { id: 'K-007', type: 'kinetic', title: 'OPERATION ROARING LION — SUPREME LEADER KILLED', time: '2026-02-28T02:30:00Z', lat: 35.70, lon: 51.42, description: 'Israeli F-35I Adir strike package releases precision-guided munitions on Khamenei compound during daylight (local) — timing chosen for tactical surprise as adversary expected night ops. HUMINT confirmed meeting in progress. Cell towers jammed, radar suppressed. Years of pattern-of-life surveillance via compromised traffic cameras enabled targeting. Double verification by senior officers completed. Supreme Leader Ali Khamenei killed.' },
   { id: 'K-008', type: 'kinetic', title: 'BANDAR ABBAS NAVAL', time: '2026-02-28T02:50:00Z', lat: 27.18, lon: 56.27, description: 'Strikes on IRGC Navy fast-attack craft pens and anti-ship cruise missile batteries' },
   { id: 'C-001', type: 'civilian_impact', title: 'TEHRAN BLACKOUT', time: '2026-02-28T03:00:00Z', lat: 35.69, lon: 51.39, description: 'Tehran experiences total internet and power blackout — 15M affected' },
   { id: 'K-009', type: 'kinetic', title: 'BUSHEHR PERIMETER', time: '2026-02-28T03:00:00Z', lat: 28.83, lon: 50.88, description: 'Precision strikes on IRGC air defense positions surrounding Bushehr NPP' },

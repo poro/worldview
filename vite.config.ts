@@ -31,6 +31,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/adsbfi/, ''),
       },
+      '/gdelt': {
+        target: 'https://api.gdeltproject.org',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/gdelt/, ''),
+      },
     },
   },
 });

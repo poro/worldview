@@ -15,6 +15,9 @@ import {
 } from './scenario-epic-fury';
 import { FeedPanel } from '../ui/feed-panel';
 import { fetchClaims, fetchNarratives, fetchBotNetworks, fetchFogZones } from './supabase';
+import { fetchConflictNews } from './gdelt';
+
+export type FeedMode = 'live' | 'scenario';
 
 export class FeedManager {
   private viewer!: Cesium.Viewer;
@@ -31,10 +34,14 @@ export class FeedManager {
   private _feedVisible: boolean = false;
   private _fogVisible: boolean = false;
   private _networksVisible: boolean = false;
+  private _mode: FeedMode = 'live';
   private updateInterval: ReturnType<typeof setInterval> | null = null;
+  private liveRefreshInterval: ReturnType<typeof setInterval> | null = null;
   private unsubscribeTime: (() => void) | null = null;
   private onFlyTo: ((lon: number, lat: number) => void) | null = null;
   private onToast: ((msg: string) => void) | null = null;
+
+  get mode(): FeedMode { return this._mode; }
 
   get feedVisible(): boolean { return this._feedVisible; }
   get fogVisible(): boolean { return this._fogVisible; }
@@ -73,7 +80,58 @@ export class FeedManager {
     });
   }
 
+  async loadLive() {
+    this._mode = 'live';
+    console.log('[FeedManager] Loading live news feed...');
+
+    try {
+      const claims = await fetchConflictNews();
+      if (claims.length === 0) {
+        console.warn('[FeedManager] No live articles found');
+        this.onToast?.('No live articles found — try again shortly');
+        return;
+      }
+
+      // Clear existing claims
+      for (const [id] of this.claims) {
+        this.claimRenderer.removeClaim(id);
+      }
+      this.claims.clear();
+
+      // Load live claims
+      for (const claim of claims) {
+        this.claims.set(claim.id, claim);
+        this.claimRenderer.addClaim(claim);
+      }
+      this.feedPanel.setClaims(claims);
+
+      console.log(`[FeedManager] Live feed loaded: ${claims.length} articles`);
+      this.onToast?.(`LIVE FEED: ${claims.length} articles loaded`);
+    } catch (err) {
+      console.error('[FeedManager] Live feed error:', err);
+      this.onToast?.('Live feed error — falling back to scenario');
+      await this.loadScenario('epic-fury');
+    }
+  }
+
+  startLiveRefresh(intervalMs: number = 5 * 60 * 1000) {
+    this.stopLiveRefresh();
+    this.liveRefreshInterval = setInterval(() => {
+      if (this._mode === 'live' && this._feedVisible) {
+        this.loadLive();
+      }
+    }, intervalMs);
+  }
+
+  stopLiveRefresh() {
+    if (this.liveRefreshInterval) {
+      clearInterval(this.liveRefreshInterval);
+      this.liveRefreshInterval = null;
+    }
+  }
+
   async loadScenario(scenarioId: string) {
+    this._mode = 'scenario';
     if (scenarioId !== 'epic-fury') {
       console.warn(`[FeedManager] Unknown scenario: ${scenarioId}`);
       return;
@@ -155,17 +213,24 @@ export class FeedManager {
     this.feedPanel.setVisible(this._feedVisible);
 
     if (this._feedVisible) {
+      // Auto-load live feed if no claims loaded yet
+      if (this.claims.size === 0) {
+        this.loadLive();
+      }
+
       // Start propagation for all loaded claims
       for (const [, claim] of this.claims) {
         this.propagationRenderer.startPropagation(claim);
       }
       this.propagationRenderer.setVisible(true);
+      this.startLiveRefresh();
       this.update();
     } else {
       this.propagationRenderer.setVisible(false);
+      this.stopLiveRefresh();
     }
 
-    this.onToast?.(this._feedVisible ? 'THE FEED ON' : 'THE FEED OFF');
+    this.onToast?.(this._feedVisible ? 'LIVE FEED ON' : 'LIVE FEED OFF');
   }
 
   toggleFogOverlay() {
@@ -211,6 +276,7 @@ export class FeedManager {
 
   destroy() {
     if (this.updateInterval) clearInterval(this.updateInterval);
+    this.stopLiveRefresh();
     if (this.unsubscribeTime) this.unsubscribeTime();
     this.claimRenderer.destroy();
     this.propagationRenderer.destroy();

@@ -640,7 +640,8 @@ async function boot() {
 
   // Load The Feed — information warfare layer
   try {
-    await feedManager.loadScenario('epic-fury');
+    // Feed starts in live mode — loads on first toggle (N key)
+    // For scenario replay: feedManager.loadScenario('epic-fury');
     console.log('[WORLDVIEW] The Feed ✓');
   } catch (e) { console.warn('[WORLDVIEW] The Feed failed:', e); }
 

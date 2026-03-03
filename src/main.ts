@@ -545,9 +545,9 @@ setInterval(() => {
 async function boot() {
   console.log('[WORLDVIEW] Booting systems...');
 
-  // Set initial camera — Iran theater (Operation Epic Fury)
+  // Set initial camera — global view (user can navigate to theater of interest)
   viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(53, 32, 5000000),
+    destination: Cesium.Cartesian3.fromDegrees(-30, 20, 20000000),
     duration: 0,
   });
 

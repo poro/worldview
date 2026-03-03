@@ -111,31 +111,39 @@ export async function fetchFlights(bounds?: {
     return adsbfiToOpenSky({ now, aircraft: allAircraft });
   }
 
-  // Production: fetch all regions in parallel for global coverage
+  // Production: fetch regions in staggered batches to avoid 429 rate limits
   try {
-    const results = await Promise.allSettled(
-      GLOBAL_REGIONS.map(r => fetchRegion(r.lat, r.lon, 250))
-    );
-
+    const BATCH_SIZE = 4;
+    const BATCH_DELAY = 1200; // ms between batches
     const allAircraft: any[] = [];
     const seen = new Set<string>();
     let now = Date.now() / 1000;
+    let successCount = 0;
 
-    for (const result of results) {
-      if (result.status !== 'fulfilled' || !result.value) continue;
-      const data = result.value;
-      if (data.now) now = data.now;
-      const aircraft = data.aircraft || data.ac || [];
-      for (const ac of aircraft) {
-        const id = ac.hex || ac.icao24;
-        if (id && !seen.has(id)) {
-          seen.add(id);
-          allAircraft.push(ac);
+    for (let i = 0; i < GLOBAL_REGIONS.length; i += BATCH_SIZE) {
+      if (i > 0) await new Promise(r => setTimeout(r, BATCH_DELAY));
+      const batch = GLOBAL_REGIONS.slice(i, i + BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map(r => fetchRegion(r.lat, r.lon, 250))
+      );
+
+      for (const result of results) {
+        if (result.status !== 'fulfilled' || !result.value) continue;
+        successCount++;
+        const data = result.value;
+        if (data.now) now = data.now;
+        const aircraft = data.aircraft || data.ac || [];
+        for (const ac of aircraft) {
+          const id = ac.hex || ac.icao24;
+          if (id && !seen.has(id)) {
+            seen.add(id);
+            allAircraft.push(ac);
+          }
         }
       }
     }
 
-    console.log(`[WORLDVIEW] Flights: ${allAircraft.length} from ${GLOBAL_REGIONS.length} regions`);
+    console.log(`[WORLDVIEW] Flights: ${allAircraft.length} from ${successCount}/${GLOBAL_REGIONS.length} regions`);
     return adsbfiToOpenSky({ now, aircraft: allAircraft });
   } catch (e) {
     console.error('Flight fetch failed:', e);

@@ -196,6 +196,15 @@ export class EventCardLayer {
       }
 
       const worldPos = Cesium.Cartesian3.fromDegrees(card.event.lon, card.event.lat, 0);
+
+      // Hide cards on the far side of the globe (behind the horizon)
+      const cameraToPoint = Cesium.Cartesian3.subtract(worldPos, scene.camera.positionWC, new Cesium.Cartesian3());
+      const cameraDir = scene.camera.directionWC;
+      if (Cesium.Cartesian3.dot(cameraToPoint, cameraDir) < 0) {
+        card.div.style.display = 'none';
+        continue;
+      }
+
       const screenPos = Cesium.SceneTransforms.worldToWindowCoordinates(scene, worldPos);
 
       if (!screenPos || screenPos.x < -50 || screenPos.x > w + 50 || screenPos.y < -50 || screenPos.y > h + 50) {

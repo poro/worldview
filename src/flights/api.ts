@@ -62,12 +62,31 @@ const GLOBAL_REGIONS = [
   { lat: -34, lon: 18 },   // South Africa
 ];
 
+// Simple in-memory cache for flight data (avoids hammering the proxy)
+const regionCache = new Map<string, { data: any; ts: number }>();
+const CACHE_TTL = 12000; // 12s — flights update every 15s
+
 async function fetchRegion(lat: number, lon: number, dist: number): Promise<any> {
+  const key = `${lat},${lon}`;
+  const cached = regionCache.get(key);
+  if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.data;
+
   const target = `https://opendata.adsb.fi/api/v2/lat/${lat}/lon/${lon}/dist/${dist}`;
   const url = `${PROXY}/?url=${encodeURIComponent(target)}`;
   const response = await fetch(url);
-  if (!response.ok) return null;
-  return response.json();
+  if (response.status === 429) {
+    // Rate limited — retry after 2s
+    await new Promise(r => setTimeout(r, 2000));
+    const retry = await fetch(url);
+    if (!retry.ok) return cached?.data ?? null; // Return stale cache if available
+    const data = await retry.json();
+    regionCache.set(key, { data, ts: Date.now() });
+    return data;
+  }
+  if (!response.ok) return cached?.data ?? null;
+  const data = await response.json();
+  regionCache.set(key, { data, ts: Date.now() });
+  return data;
 }
 
 export async function fetchFlights(bounds?: {
@@ -113,8 +132,8 @@ export async function fetchFlights(bounds?: {
 
   // Production: fetch regions in staggered batches to avoid 429 rate limits
   try {
-    const BATCH_SIZE = 4;
-    const BATCH_DELAY = 1200; // ms between batches
+    const BATCH_SIZE = 3;
+    const BATCH_DELAY = 2000; // ms between batches
     const allAircraft: any[] = [];
     const seen = new Set<string>();
     let now = Date.now() / 1000;

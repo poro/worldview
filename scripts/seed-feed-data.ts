@@ -6,104 +6,115 @@
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = 'https://mxbfffebroitdogmxolp.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14YmZmZmVicm9pdGRvZ214b2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1Nzc1NjcsImV4cCI6MjA4ODE1MzU2N30.bF6455VlQ50xMz0GS54R7S7ERWA5qpW5-fz-Uq6ziqg';
+const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14YmZmZmVicm9pdGRvZ214b2xwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjU3NzU2NywiZXhwIjoyMDg4MTUzNTY3fQ.E_bebSkWzdfMRwrlrbwxEsSq7ElmxVzuSCQgJs3fvGE';
 
-// Import scenario data — use dynamic import since this is a script
 async function main() {
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-  // Dynamic imports for the scenario data
-  const { EPIC_FURY_CLAIMS } = await import('../src/feed/scenario-epic-fury');
-  const { EPIC_FURY_NARRATIVES } = await import('../src/feed/scenario-epic-fury');
-  const { EPIC_FURY_BOT_NETWORKS } = await import('../src/feed/scenario-epic-fury');
-  const { EPIC_FURY_FOG_ZONES } = await import('../src/feed/scenario-epic-fury');
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  const { EPIC_FURY_CLAIMS, EPIC_FURY_NARRATIVES, EPIC_FURY_BOT_NETWORKS, EPIC_FURY_FOG_ZONES } = await import('../src/feed/scenario-epic-fury');
 
   const scenarioId = 'epic-fury';
-
   console.log('Seeding Epic Fury scenario data...');
 
-  // --- Ensure scenario exists ---
-  console.log('  Upserting scenario...');
-  const { error: scenarioErr } = await supabase
-    .from('scenarios')
-    .upsert({
-      id: scenarioId,
-      name: 'Operation Epic Fury',
-      description: 'US/Israel strikes on Iranian nuclear facilities — information warfare scenario',
-      start_time: '2026-02-28T00:00:00Z',
-      end_time: '2026-03-03T00:00:00Z',
-    }, { onConflict: 'id' });
-
-  if (scenarioErr) {
-    console.warn('  Scenario upsert warning:', scenarioErr.message);
-    console.log('  (Table may not exist yet — continuing with data tables)');
-  }
-
-  // --- Seed Claims ---
+  // --- Claims ---
   console.log(`  Seeding ${EPIC_FURY_CLAIMS.length} claims...`);
-  for (const claim of EPIC_FURY_CLAIMS) {
-    const { error } = await supabase
-      .from('claims')
-      .upsert({
-        id: claim.id,
-        scenario_id: scenarioId,
-        data: claim,
-      }, { onConflict: 'id' });
-
-    if (error) {
-      console.warn(`  Claim ${claim.id} error:`, error.message);
-    }
+  for (const c of EPIC_FURY_CLAIMS) {
+    const { error } = await supabase.from('claims').upsert({
+      id: c.id,
+      scenario_id: scenarioId,
+      headline: c.headline,
+      body: c.body,
+      media_type: c.mediaType,
+      media_url: c.mediaUrl ?? null,
+      info_event_type: c.infoEventType,
+      misinfo_taxonomy: c.misinfoTaxonomy,
+      truth_score: c.truthScore,
+      severity_tier: c.severityTier,
+      origin_lat: c.origin.lat,
+      origin_lon: c.origin.lon,
+      target_lat: c.targetLocation?.lat ?? null,
+      target_lon: c.targetLocation?.lon ?? null,
+      propagation_radius: c.propagationRadius,
+      timestamp: c.timestamp,
+      peak_timestamp: c.peakTimestamp ?? null,
+      decay_timestamp: c.decayTimestamp ?? null,
+      correction_timestamp: c.correctionTimestamp ?? null,
+      verification_status: c.verificationStatus,
+      ground_truth_summary: c.groundTruthSummary,
+      source: c.source,
+      amplifiers: c.amplifiers,
+      propagation: c.propagation,
+      reach: c.reach,
+      evidence_links: c.evidenceLinks,
+      linked_ground_truth_event_id: c.linkedGroundTruthEventId ?? null,
+    }, { onConflict: 'id' });
+    if (error) console.warn(`  Claim ${c.id}: ${error.message}`);
+    else console.log(`  ✅ ${c.id}: ${c.headline.substring(0, 60)}`);
   }
 
-  // --- Seed Narratives ---
+  // --- Narratives ---
   console.log(`  Seeding ${EPIC_FURY_NARRATIVES.length} narratives...`);
-  for (const narrative of EPIC_FURY_NARRATIVES) {
-    const { error } = await supabase
-      .from('narratives')
-      .upsert({
-        id: narrative.id,
-        scenario_id: scenarioId,
-        data: narrative,
-      }, { onConflict: 'id' });
-
-    if (error) {
-      console.warn(`  Narrative ${narrative.id} error:`, error.message);
-    }
+  for (const n of EPIC_FURY_NARRATIVES) {
+    const { error } = await supabase.from('narratives').upsert({
+      id: n.id,
+      scenario_id: scenarioId,
+      title: n.title,
+      summary: n.summary,
+      linked_event_ids: n.linkedEventIds,
+      linked_claim_ids: n.linkedClaimIds,
+      origin: n.origin,
+      first_seen: n.firstSeen,
+      dominance_start: n.dominancePeriod?.start ?? null,
+      dominance_end: n.dominancePeriod?.end ?? null,
+      competing_narrative_ids: n.competingNarrativeIds,
+      truth_alignment: n.truthAlignment,
+    }, { onConflict: 'id' });
+    if (error) console.warn(`  Narrative ${n.id}: ${error.message}`);
+    else console.log(`  ✅ ${n.id}: ${n.title}`);
   }
 
-  // --- Seed Bot Networks ---
+  // --- Bot Networks ---
   console.log(`  Seeding ${EPIC_FURY_BOT_NETWORKS.length} bot networks...`);
-  for (const network of EPIC_FURY_BOT_NETWORKS) {
-    const { error } = await supabase
-      .from('bot_networks')
-      .upsert({
-        id: network.id,
-        scenario_id: scenarioId,
-        data: network,
-      }, { onConflict: 'id' });
-
-    if (error) {
-      console.warn(`  Bot network ${network.id} error:`, error.message);
-    }
+  for (const b of EPIC_FURY_BOT_NETWORKS) {
+    const { error } = await supabase.from('bot_networks').upsert({
+      id: b.id,
+      scenario_id: scenarioId,
+      name: b.name,
+      attributed_to: b.attributedTo ?? null,
+      node_count: b.nodeCount,
+      platforms: b.platforms,
+      primary_lat: b.primaryLocation.lat,
+      primary_lon: b.primaryLocation.lon,
+      nodes: b.nodes,
+      active_start: b.activePeriod.start,
+      active_end: b.activePeriod.end,
+      target_claim_ids: b.targetClaimIds,
+      detection_confidence: b.detectionConfidence,
+    }, { onConflict: 'id' });
+    if (error) console.warn(`  Bot network ${b.id}: ${error.message}`);
+    else console.log(`  ✅ ${b.id}: ${b.name}`);
   }
 
-  // --- Seed Fog Zones ---
+  // --- Fog Zones ---
   console.log(`  Seeding ${EPIC_FURY_FOG_ZONES.length} fog zones...`);
-  for (const zone of EPIC_FURY_FOG_ZONES) {
-    const { error } = await supabase
-      .from('info_fog_zones')
-      .upsert({
-        id: zone.id,
-        scenario_id: scenarioId,
-        data: zone,
-      }, { onConflict: 'id' });
-
-    if (error) {
-      console.warn(`  Fog zone ${zone.id} error:`, error.message);
-    }
+  for (const f of EPIC_FURY_FOG_ZONES) {
+    const { error } = await supabase.from('info_fog_zones').upsert({
+      id: f.id,
+      scenario_id: scenarioId,
+      name: f.name,
+      center_lat: f.center.lat,
+      center_lon: f.center.lon,
+      radius_km: f.radiusKm,
+      fog_level: f.fogLevel,
+      cause: f.cause,
+      active_start: f.activePeriod.start,
+      active_end: f.activePeriod.end,
+      description: f.description,
+    }, { onConflict: 'id' });
+    if (error) console.warn(`  Fog zone ${f.id}: ${error.message}`);
+    else console.log(`  ✅ ${f.id}: ${f.name}`);
   }
 
-  console.log('Seed complete!');
+  console.log('\nSeed complete!');
 }
 
 main().catch(console.error);

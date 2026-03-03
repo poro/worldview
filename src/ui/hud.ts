@@ -165,6 +165,17 @@ export class HUD {
     this.elements.dataAge.textContent = sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m`;
   }
 
+  updateFeedStats(visible: number, total: number, feedActive: boolean) {
+    const statsEl = document.getElementById('hud-feed-stats');
+    const dividerEl = document.getElementById('hud-feed-divider');
+    const claimsEl = document.getElementById('hud-feed-claims');
+    if (statsEl && dividerEl && claimsEl) {
+      statsEl.style.display = feedActive ? '' : 'none';
+      dividerEl.style.display = feedActive ? '' : 'none';
+      claimsEl.textContent = `${visible}/${total}`;
+    }
+  }
+
   private animateCount(el: HTMLElement) {
     el.classList.remove('count-flash');
     void el.offsetWidth;
@@ -325,6 +336,12 @@ export class HUD {
           <span class="text-red-400 text-xs font-medium stat-value" id="hud-mil-vessels">0</span>
         </div>
         <div class="w-px h-4 bg-gray-800"></div>
+        <div class="flex items-center gap-2" id="hud-feed-stats" style="display:none">
+          <div class="w-2 h-2 rounded-full" style="background:#E91E63"></div>
+          <span class="data-label mr-1">CLAIMS</span>
+          <span class="text-xs font-medium stat-value" style="color:#E91E63" id="hud-feed-claims">0</span>
+        </div>
+        <div class="w-px h-4 bg-gray-800" id="hud-feed-divider" style="display:none"></div>
         <div class="flex items-center gap-2">
           <span class="data-label mr-1">DATA</span>
           <span class="text-xs text-gray-400" id="hud-data-age">--</span>

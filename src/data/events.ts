@@ -1,6 +1,13 @@
+import type { InfoEventType } from '../feed/types';
+
+export type ConflictEventType =
+  | 'kinetic' | 'retaliation' | 'civilian_impact' | 'infrastructure'
+  | 'escalation' | 'maritime' | 'intelligence' | 'cyber'
+  | InfoEventType;
+
 export interface ConflictEvent {
   id: string;
-  type: 'kinetic' | 'retaliation' | 'civilian_impact' | 'infrastructure' | 'escalation' | 'maritime' | 'intelligence' | 'cyber';
+  type: ConflictEventType;
   title: string;
   description: string;
   time: string; // ISO

@@ -1,5 +1,6 @@
 import * as Cesium from 'cesium';
 import { CONFLICT_EVENTS, ConflictEvent } from '../data/events';
+import { INFO_EVENT_COLORS } from '../feed/types';
 
 const EVENT_TYPE_COLORS: Record<string, string> = {
   kinetic: '#ff3d3d',
@@ -10,6 +11,7 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   maritime: '#00e5ff',
   intelligence: '#00ff88',
   cyber: '#aa00ff',
+  ...INFO_EVENT_COLORS,
 };
 
 interface CardState {

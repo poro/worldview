@@ -536,3 +536,167 @@
 .event-card-title { font-size: 11px; color: #e0e0e0; font-weight: 600; margin-bottom: 2px; }
 .event-card-desc { font-size: 9px; color: #888; line-height: 1.3; }
 .event-card-thumb { width: 100%; height: 80px; object-fit: cover; border-radius: 2px; margin-top: 6px; border: 1px solid rgba(255,255,255,0.1); }
+
+/* ============================================ */
+/* The Feed — Claim Cards & Feed Panel          */
+/* ============================================ */
+
+/* Globe overlay claim cards */
+.feed-claim-card {
+  position: absolute;
+  z-index: 155;
+  pointer-events: auto;
+}
+.feed-card-inner {
+  background: rgba(10,10,15,0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(233,30,99,0.25);
+  border-radius: 3px;
+  padding: 8px 10px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.feed-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.feed-type-badge {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+.feed-time {
+  font-size: 8px;
+  color: #666;
+}
+.feed-card-headline {
+  font-size: 10px;
+  color: #e0e0e0;
+  font-weight: 600;
+  margin-bottom: 4px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.feed-card-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8px;
+  color: #888;
+  margin-bottom: 3px;
+}
+.feed-source { color: #aaa; }
+.feed-reach { color: #E91E63; }
+.feed-card-badges { display: flex; gap: 4px; }
+.feed-severity-badge {
+  font-size: 7px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+.feed-severity-badge.critical { background: rgba(255,61,61,0.2); color: #ff3d3d; }
+.feed-severity-badge.high { background: rgba(255,179,0,0.2); color: #ffb300; }
+.feed-severity-badge.moderate { background: rgba(0,229,255,0.2); color: #00e5ff; }
+.feed-severity-badge.low { background: rgba(100,100,100,0.2); color: #888; }
+.feed-severity-badge.benign { background: rgba(76,175,80,0.2); color: #4CAF50; }
+
+/* Feed Panel */
+.feed-panel-root .cmd-panel {
+  border-color: rgba(233,30,99,0.2);
+}
+.feed-panel-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(233,30,99,0.3) transparent;
+}
+.feed-panel-list::-webkit-scrollbar { width: 4px; }
+.feed-panel-list::-webkit-scrollbar-track { background: transparent; }
+.feed-panel-list::-webkit-scrollbar-thumb { background: rgba(233,30,99,0.3); border-radius: 2px; }
+
+.feed-filter-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border: 1px solid rgba(100,100,100,0.3);
+  border-radius: 2px;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.feed-filter-btn:hover { border-color: rgba(233,30,99,0.4); color: #aaa; }
+.feed-filter-btn.active { border-color: rgba(233,30,99,0.5); color: #E91E63; background: rgba(233,30,99,0.1); }
+
+.feed-item {
+  cursor: pointer;
+  transition: background 0.15s;
+  border-radius: 2px;
+  margin-bottom: 2px;
+}
+.feed-item:hover { background: rgba(233,30,99,0.06); }
+.feed-item-inner {
+  padding: 6px 8px;
+}
+.feed-item-time {
+  font-size: 8px;
+  color: #666;
+  margin-bottom: 2px;
+}
+.feed-item-headline {
+  font-size: 10px;
+  color: #e0e0e0;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 3px;
+}
+.feed-item-source {
+  font-size: 8px;
+  color: #888;
+  margin-bottom: 4px;
+}
+.feed-item-reach-bar {
+  height: 3px;
+  background: rgba(100,100,100,0.2);
+  border-radius: 1px;
+  margin-bottom: 2px;
+  overflow: hidden;
+}
+.feed-item-reach-fill {
+  height: 100%;
+  border-radius: 1px;
+  transition: width 0.3s;
+  opacity: 0.7;
+}
+.feed-item-reach-label {
+  font-size: 7px;
+  color: #888;
+  margin-bottom: 3px;
+}
+.feed-item-badges {
+  display: flex;
+  gap: 4px;
+}
+.feed-badge {
+  font-size: 7px;
+  padding: 1px 4px;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+.feed-badge.severity-critical { color: #ff3d3d; }
+.feed-badge.severity-high { color: #ffb300; }
+.feed-badge.severity-moderate { color: #00e5ff; }
+.feed-badge.severity-low { color: #888; }
+.feed-badge.severity-benign { color: #4CAF50; }
+
+.feed-item-highlight {
+  animation: feed-highlight-flash 2s ease;
+}
+@keyframes feed-highlight-flash {
+  0%, 100% { background: transparent; }
+  20% { background: rgba(233,30,99,0.15); }
+}

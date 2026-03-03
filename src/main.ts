@@ -31,6 +31,9 @@ import { ViewModeManager } from './ui/view-modes';
 import { RightPanel } from './ui/right-panel';
 import { AircraftPopup } from './ui/aircraft-popup';
 import { CONFLICT_EVENTS } from './data/events';
+import { INFO_EVENTS } from './data/events-info';
+import { INFO_EVENT_COLORS } from './feed/types';
+import { FeedManager } from './feed/manager';
 
 // Boot sequence
 console.log(
@@ -219,7 +222,7 @@ timeline = new Timeline(timeController, {
 }, eventAdapter);
 timeline.setRange(new Date('2026-02-28T00:00:00Z'), new Date());
 
-// Load conflict events into timeline
+// Load conflict events + info events into timeline
 const conflictTimelineEvents: TimelineEvent[] = CONFLICT_EVENTS.map(evt => ({
   time: new Date(evt.time),
   lat: evt.lat,
@@ -228,7 +231,25 @@ const conflictTimelineEvents: TimelineEvent[] = CONFLICT_EVENTS.map(evt => ({
   type: evt.type,
   description: evt.description,
 }));
-timeline.setEvents(conflictTimelineEvents);
+const infoTimelineEvents: TimelineEvent[] = INFO_EVENTS.map(evt => ({
+  time: new Date(evt.time),
+  lat: evt.lat,
+  lon: evt.lon,
+  title: evt.title,
+  type: evt.type,
+  description: evt.description,
+}));
+timeline.setEvents([...conflictTimelineEvents, ...infoTimelineEvents]);
+
+// The Feed — information warfare layer
+const feedManager = new FeedManager();
+feedManager.init(viewer, timeController);
+feedManager.setOnFlyTo((lon, lat) => {
+  flyToCinematic(viewer, lon, lat, 500000, 1.5);
+});
+feedManager.setOnToast((msg) => {
+  controls.showToast(msg);
+});
 
 // Aircraft hover popup
 const aircraftPopup = new AircraftPopup(viewer);
@@ -373,8 +394,7 @@ document.addEventListener('keydown', (e) => {
       break;
     case 'n':
     case 'N':
-      maritimeTracker.toggle();
-      controls.setLayerState('maritime', maritimeTracker.visible);
+      feedManager.toggleFeedLayer();
       break;
     case 'h':
     case 'H':
@@ -404,6 +424,14 @@ document.addEventListener('keydown', (e) => {
     // Overlay toggles
     case 'j':
     case 'J':
+      feedManager.toggleFogOverlay();
+      break;
+    case 'k':
+    case 'K':
+      feedManager.toggleNetworkGraph();
+      break;
+    case 'd':
+    case 'D':
       gpsLayer.toggle();
       controls.showToast(gpsLayer.visible ? 'GPS INTERFERENCE ON' : 'GPS INTERFERENCE OFF');
       break;
@@ -421,6 +449,11 @@ document.addEventListener('keydown', (e) => {
     case 'L':
       shippingLayer.toggle();
       controls.showToast(shippingLayer.visible ? 'SHIPPING LANES ON' : 'SHIPPING LANES OFF');
+      break;
+    case 'b':
+    case 'B':
+      maritimeTracker.toggle();
+      controls.setLayerState('maritime', maritimeTracker.visible);
       break;
     // Quick zoom: Iran theater
     case 'p':
@@ -497,10 +530,15 @@ function handleSearch(query: string) {
   console.log('Search: no match for', q);
 }
 
-// Data age updater
+// Data age updater + Feed HUD stats
 setInterval(() => {
   const age = Date.now() - flightTracker.lastUpdateTime;
   hud.updateDataAge(age);
+  hud.updateFeedStats(
+    feedManager.getVisibleClaimCount(),
+    feedManager.getTotalClaimCount(),
+    feedManager.feedVisible,
+  );
 }, DATA_AGE_UPDATE_INTERVAL);
 
 // Start all systems
@@ -599,6 +637,12 @@ async function boot() {
     hexBinLayer.load();
     console.log('[WORLDVIEW] Hex Bins ✓');
   } catch (e) { console.warn('[WORLDVIEW] Hex Bins failed:', e); }
+
+  // Load The Feed — information warfare layer
+  try {
+    await feedManager.loadScenario('epic-fury');
+    console.log('[WORLDVIEW] The Feed ✓');
+  } catch (e) { console.warn('[WORLDVIEW] The Feed failed:', e); }
 
   console.log('[WORLDVIEW] All systems online.');
 }

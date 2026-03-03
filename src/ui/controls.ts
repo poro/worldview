@@ -288,10 +288,13 @@ export class Controls {
           <div><span class="text-gray-500">T</span> Traffic</div>
           <div><span class="text-gray-500">G</span> Quakes</div>
           <div><span class="text-gray-500">C</span> CCTV</div>
-          <div><span class="text-gray-500">N</span> Ships</div>
+          <div><span class="text-gray-500">B</span> Ships</div>
           <div><span class="text-gray-500">H</span> HUD</div>
-          <div><span class="text-gray-500">/</span> Search</div>
-          <div class="mt-1 pt-1 border-t border-gray-800"><span class="text-cyan-600">Q-I</span> <span class="text-cyan-700">Locations</span></div>
+          <div class="mt-1 pt-1 border-t border-gray-800" style="border-color:rgba(233,30,99,0.3)"><span style="color:#E91E63">N</span> <span style="color:#AD1457">The Feed</span></div>
+          <div><span style="color:#E91E63">J</span> <span style="color:#AD1457">Info Fog</span></div>
+          <div><span style="color:#E91E63">K</span> <span style="color:#AD1457">Bot Nets</span></div>
+          <div class="mt-1 pt-1 border-t border-gray-800"><span class="text-gray-500">/</span> Search</div>
+          <div><span class="text-cyan-600">Q-I</span> <span class="text-cyan-700">Locations</span></div>
           <div><span class="text-gray-500">ESC</span> Close</div>
         </div>
       </div>

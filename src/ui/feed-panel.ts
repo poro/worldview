@@ -7,6 +7,7 @@ import { FEED_CONFIG } from '../feed/config';
 
 export interface FeedPanelCallbacks {
   onClaimClick: (claimId: string) => void;
+  onModeSwitch?: (mode: 'live' | 'scenario') => void;
 }
 
 type FilterType = 'all' | 'disinfo_state' | 'deepfake' | 'misinfo_organic' | 'correction' | 'critical' | 'high';
@@ -65,9 +66,13 @@ export class FeedPanel {
     this.root.innerHTML = `
       <div class="cmd-panel rounded-sm" style="width:320px;max-height:calc(100vh - 200px);display:flex;flex-direction:column;">
         <div class="px-3 py-2 border-b border-gray-800/50" style="flex-shrink:0;">
-          <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center justify-between mb-1">
             <span class="data-label tracking-wider" style="color:#E91E63;">THE FEED</span>
             <span class="text-[8px] text-gray-600" id="feed-count">0 claims</span>
+          </div>
+          <div class="flex gap-1 mb-2" id="feed-mode-toggle">
+            <button class="feed-mode-btn active" data-mode="live" style="font-size:8px;padding:2px 8px;background:#E91E63;color:white;border:1px solid #E91E63;border-radius:2px;cursor:pointer;letter-spacing:1px;">● LIVE</button>
+            <button class="feed-mode-btn" data-mode="scenario" style="font-size:8px;padding:2px 8px;background:transparent;color:#666;border:1px solid #333;border-radius:2px;cursor:pointer;letter-spacing:1px;">SCENARIO</button>
           </div>
           <div class="flex gap-1 flex-wrap" id="feed-filters"></div>
         </div>
@@ -103,6 +108,29 @@ export class FeedPanel {
       });
       filtersEl.appendChild(btn);
     }
+
+    // Mode toggle buttons
+    const modeToggle = this.root.querySelector('#feed-mode-toggle')!;
+    modeToggle.querySelectorAll('.feed-mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mode = (btn as HTMLElement).dataset.mode as 'live' | 'scenario';
+        modeToggle.querySelectorAll('.feed-mode-btn').forEach(b => {
+          const el = b as HTMLElement;
+          const isActive = el.dataset.mode === mode;
+          el.classList.toggle('active', isActive);
+          if (isActive) {
+            el.style.background = mode === 'live' ? '#E91E63' : '#7C4DFF';
+            el.style.color = 'white';
+            el.style.borderColor = mode === 'live' ? '#E91E63' : '#7C4DFF';
+          } else {
+            el.style.background = 'transparent';
+            el.style.color = '#666';
+            el.style.borderColor = '#333';
+          }
+        });
+        this.callbacks.onModeSwitch?.(mode);
+      });
+    });
   }
 
   private renderList() {

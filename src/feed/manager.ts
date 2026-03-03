@@ -59,6 +59,7 @@ export class FeedManager {
     this.propagationRenderer = new PropagationRenderer(viewer);
     this.feedPanel = new FeedPanel({
       onClaimClick: (claimId) => this.selectClaim(claimId),
+      onModeSwitch: (mode) => this.switchMode(mode),
     });
 
     // Wire claim click from globe to feed panel
@@ -231,6 +232,36 @@ export class FeedManager {
     }
 
     this.onToast?.(this._feedVisible ? 'LIVE FEED ON' : 'LIVE FEED OFF');
+  }
+
+  async switchMode(mode: FeedMode) {
+    if (mode === this._mode) return;
+
+    // Clear existing claims
+    for (const [id] of this.claims) {
+      this.claimRenderer.removeClaim(id);
+      this.propagationRenderer.stopPropagation(id);
+    }
+    this.claims.clear();
+
+    if (mode === 'live') {
+      this.stopLiveRefresh();
+      await this.loadLive();
+      this.startLiveRefresh();
+      this.onToast?.('SWITCHED TO LIVE FEED');
+    } else {
+      this.stopLiveRefresh();
+      await this.loadScenario('epic-fury');
+      // Start propagation for scenario claims
+      for (const [, claim] of this.claims) {
+        this.propagationRenderer.startPropagation(claim);
+      }
+      this.onToast?.('SWITCHED TO SCENARIO: EPIC FURY');
+    }
+
+    if (this._feedVisible) {
+      this.update();
+    }
   }
 
   toggleFogOverlay() {

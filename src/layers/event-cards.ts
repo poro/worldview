@@ -26,6 +26,8 @@ interface CardState {
 const MAX_VISIBLE_CARDS = 4;
 // Min screen distance between cards before hiding overlaps (pixels)
 const MIN_CARD_SPACING = 150;
+// Max distance (meters) from camera to event for card to show (~3000km)
+const MAX_CARD_DISTANCE = 3_000_000;
 
 export class EventCardLayer {
   private viewer: Cesium.Viewer;
@@ -33,6 +35,7 @@ export class EventCardLayer {
   private cardContainer: HTMLElement;
   private _visible: boolean = true;
   private selectedId: string | null = null;
+  private globalTicker: HTMLElement;
 
   constructor(viewer: Cesium.Viewer) {
     this.viewer = viewer;
@@ -41,6 +44,16 @@ export class EventCardLayer {
     this.cardContainer.id = 'event-card-container';
     this.cardContainer.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:150;overflow:hidden;';
     document.body.appendChild(this.cardContainer);
+
+    // Global events ticker — fixed position, bottom-left
+    this.globalTicker = document.createElement('div');
+    this.globalTicker.id = 'global-event-ticker';
+    this.globalTicker.style.cssText = `
+      position: fixed; bottom: 60px; left: 12px; z-index: 160;
+      display: flex; flex-direction: column; gap: 4px;
+      pointer-events: auto; max-width: 340px;
+    `;
+    document.body.appendChild(this.globalTicker);
   }
 
   get visible(): boolean { return this._visible; }
@@ -51,8 +64,60 @@ export class EventCardLayer {
       for (const evt of CONFLICT_EVENTS) {
         const color = Cesium.Color.fromCssColorString(EVENT_TYPE_COLORS[evt.type] || '#ffffff');
         const typeClass = evt.type.replace('_', '-');
+        const timeStr = new Date(evt.time).toUTCString().slice(17, 22) + ' UTC';
 
-        // Ground marker — clickable dot
+        // Global events go to fixed ticker, not geo-anchored
+        if (evt.global) {
+          const pill = document.createElement('div');
+          pill.className = 'global-event-pill';
+          pill.style.cssText = `
+            background: rgba(0,0,0,0.85); border-left: 3px solid ${EVENT_TYPE_COLORS[evt.type] || '#fff'};
+            padding: 6px 10px; font-family: 'JetBrains Mono', monospace; cursor: pointer;
+            backdrop-filter: blur(8px); border-radius: 2px;
+          `;
+          pill.innerHTML = `
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span class="event-type-badge ${typeClass}" style="font-size:8px;padding:1px 4px;">${evt.type.replace('_', ' ').toUpperCase()}</span>
+              <span style="color:#fff;font-size:10px;font-weight:600;">${evt.title}</span>
+              <span style="color:rgba(255,255,255,0.4);font-size:9px;margin-left:auto;">${timeStr}</span>
+            </div>
+          `;
+          pill.addEventListener('click', () => {
+            this.viewer.camera.flyTo({
+              destination: Cesium.Cartesian3.fromDegrees(evt.lon, evt.lat, 2000000),
+              duration: 1.5,
+            });
+          });
+          this.globalTicker.appendChild(pill);
+
+          // Still add a ground marker for global events
+          this.viewer.entities.add({
+            position: Cesium.Cartesian3.fromDegrees(evt.lon, evt.lat, 0),
+            point: {
+              pixelSize: 6,
+              color: color.withAlpha(0.5),
+              outlineColor: color.withAlpha(0.2),
+              outlineWidth: 2,
+              heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            },
+            label: {
+              text: evt.title,
+              font: '9px JetBrains Mono',
+              fillColor: color.withAlpha(0.5),
+              outlineColor: Cesium.Color.BLACK,
+              outlineWidth: 2,
+              style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+              pixelOffset: new Cesium.Cartesian2(12, 0),
+              scaleByDistance: new Cesium.NearFarScalar(5e5, 0.8, 5e6, 0.0),
+              distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 3e6),
+              horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+            },
+            show: this._visible,
+          });
+          continue;
+        }
+
+        // Ground marker — clickable dot (geo-anchored events only)
         const groundEntity = this.viewer.entities.add({
           position: Cesium.Cartesian3.fromDegrees(evt.lon, evt.lat, 0),
           point: {
@@ -93,11 +158,10 @@ export class EventCardLayer {
             material: color.withAlpha(0.2),
           },
           properties: { type: 'event-connector' },
-          show: false, // Only show when card is expanded
+          show: false,
         });
 
-        // Compact HTML card — only shown when selected or auto-featured
-        const timeStr = new Date(evt.time).toUTCString().slice(17, 22) + ' UTC';
+        // Compact HTML card — geo-anchored, only visible when zoomed in
         const div = document.createElement('div');
         div.className = 'event-card';
         div.innerHTML = `
@@ -158,6 +222,7 @@ export class EventCardLayer {
       card.connectorEntity.show = this._visible && card.expanded;
       if (!this._visible) card.div.style.display = 'none';
     }
+    this.globalTicker.style.display = this._visible ? '' : 'none';
   }
 
   filterByType(type: string | null) {
@@ -212,9 +277,14 @@ export class EventCardLayer {
         continue;
       }
 
-      // Camera distance to this point
+      // Camera distance to this point — only show when zoomed into region
       const camPos = scene.camera.positionWC;
       const dist = Cesium.Cartesian3.distance(camPos, worldPos);
+
+      if (dist > MAX_CARD_DISTANCE && !card.expanded) {
+        card.div.style.display = 'none';
+        continue;
+      }
 
       positioned.push({ card, x: screenPos.x, y: screenPos.y, dist });
     }

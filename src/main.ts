@@ -380,7 +380,7 @@ bus.on('layer:toggle', (layer: string) => {
   switch (layer) {
     case 'cctv': cctvLayer.toggle(); controls.setLayerState('cctv', cctvLayer.visible); break;
     case 'flights': flightTracker.toggle(); controls.setLayerState('flights', flightTracker.visible); break;
-    case 'satellites': satRenderer.toggle(); controls.setLayerState('satellites', satRenderer.visible); break;
+    case 'satellites': lazyStart('satellites', () => satRenderer.start()); satRenderer.toggle(); controls.setLayerState('satellites', satRenderer.visible); break;
     case 'earthquakes': earthquakeLayer.toggle(); controls.setLayerState('earthquakes', earthquakeLayer.visible); break;
     case 'traffic': trafficParticles.toggle(); controls.setLayerState('traffic', trafficParticles.visible); break;
     case 'military': flightTracker.toggleMilitary(); controls.setLayerState('military', flightTracker.militaryMode); break;

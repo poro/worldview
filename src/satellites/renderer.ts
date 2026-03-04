@@ -29,7 +29,7 @@ export class SatelliteRenderer {
   private orbitEntities: Map<string, Cesium.Entity> = new Map();
   private footprintEntities: Map<string, Cesium.Entity> = new Map();
   private animInterval: number | null = null;
-  private _visible: boolean = true;
+  private _visible: boolean = false;
   private _activeCategories: Set<string> = new Set(['stations', 'starlink', 'military', 'gps', 'weather']);
   private _selectedSat: SatellitePosition | null = null;
   private _selectedTle: TLERecord | null = null;

@@ -1,4 +1,5 @@
-import type { Claim, GeoCoord, InfoEventType, SeverityTier } from './types';
+import type { LiveArticle, Claim, GeoCoord, SeverityTier } from './types';
+import { articleToClaim } from './types';
 import { FEED_SOURCES } from './config';
 // ============ Geocoding Map ============
 const KEYWORD_LOCATIONS: Array<{ keywords: string[]; lat: number; lon: number }> = [
@@ -56,78 +57,48 @@ function geocodeTitle(title: string): GeoCoord {
   return { lat: def.lat + jitter() * 1.0, lon: def.lon + jitter() * 1.0 };
 }
 
-function classifyTitle(title: string): { type: InfoEventType; severity: SeverityTier } {
+function classifyTitle(title: string): { severity: SeverityTier; category: string } {
   const lower = title.toLowerCase();
   if (lower.match(/kill|dead|death|casualt|bomb|strike|attack|shoot|war /))
-    return { type: 'verification', severity: 'critical' };
+    return { severity: 'critical', category: 'kinetic' };
   if (lower.match(/escalat|nuclear|defcon|mobiliz|invasion/))
-    return { type: 'verification', severity: 'critical' };
+    return { severity: 'critical', category: 'kinetic' };
   if (lower.match(/missile|drone|rocket|torpedo|naval/))
-    return { type: 'verification', severity: 'high' };
+    return { severity: 'high', category: 'kinetic' };
   if (lower.match(/sanction|tariff|trade|econom|market|oil|crude|stock/))
-    return { type: 'verification', severity: 'moderate' };
+    return { severity: 'moderate', category: 'economic' };
   if (lower.match(/cyber|hack|breach|internet|network/))
-    return { type: 'verification', severity: 'high' };
+    return { severity: 'high', category: 'kinetic' };
   if (lower.match(/diplomat|negotiat|ceasefire|treaty|summit/))
-    return { type: 'verification', severity: 'moderate' };
+    return { severity: 'moderate', category: 'economic' };
   if (lower.match(/refugee|humanitarian|civilian|hospital|evacuat/))
-    return { type: 'verification', severity: 'high' };
+    return { severity: 'high', category: 'kinetic' };
   if (lower.match(/deepfake|fake|disinformation|misinformation|propaganda/))
-    return { type: 'deepfake', severity: 'high' };
-  return { type: 'verification', severity: 'low' };
+    return { severity: 'high', category: 'disinfo' };
+  return { severity: 'low', category: 'news' };
 }
 
-function makeClaim(
+function makeArticle(
   id: string,
   title: string,
   sourceName: string,
-  sourceCountry: string,
   origin: GeoCoord,
   timestamp: Date,
-  type: InfoEventType,
   severity: SeverityTier,
+  category: string,
   url?: string,
-): Claim {
+  imageUrl?: string,
+): LiveArticle {
   return {
     id,
-    scenarioId: 'live',
     headline: title,
-    body: title,
-    mediaType: 'article',
-    mediaUrl: undefined,
-    infoEventType: type,
-    misinfoTaxonomy: [],
-    truthScore: 50,
-    severityTier: severity,
+    source: sourceName,
+    url,
     origin,
-    propagationRadius: 200,
     timestamp: timestamp.toISOString(),
-    source: {
-      name: sourceName,
-      type: 'digital_native',
-      country: sourceCountry,
-      credibilityRating: 60,
-      isStateAffiliated: false,
-      platform: 'website',
-    },
-    amplifiers: [],
-    propagation: {
-      speed: 'steady',
-      pattern: 'organic_viral',
-      peakVelocity: 1000,
-      halfLife: 12,
-      crossPlatformHops: 1,
-    },
-    reach: {
-      estimatedImpressions: 0,
-      shares: 0,
-      engagementRate: 0,
-      countriesReached: [sourceCountry],
-      languagesSpread: ['en'],
-    },
-    verificationStatus: 'unverified' as const,
-    groundTruthSummary: '',
-    evidenceLinks: [],
+    severity,
+    category,
+    imageUrl,
   };
 }
 
@@ -163,7 +134,7 @@ interface NewsArticle {
   tone: number | null;
 }
 
-async function fetchFromUnifiedTable(): Promise<Claim[]> {
+async function fetchFromUnifiedTable(): Promise<LiveArticle[]> {
   try {
     const res = await fetch(
       `${WORLDVIEW_SUPABASE}/rest/v1/news_articles?order=ingested_at.desc&limit=${FEED_SOURCES.MAX_ARTICLES}`,
@@ -183,20 +154,20 @@ async function fetchFromUnifiedTable(): Promise<Claim[]> {
         ? { lat: a.lat + jitter() * 0.2, lon: a.lon + jitter() * 0.2 }
         : geocodeTitle(a.title);
 
-      const { type, severity } = (a.severity && a.event_type)
-        ? { type: mapEventType(a.event_type), severity: mapSeverity(a.severity) }
+      const { severity } = (a.severity)
+        ? { severity: mapSeverity(a.severity) }
         : classifyTitle(a.title);
 
-      return makeClaim(
+      return makeArticle(
         `news-${a.id}`,
         a.title,
         a.provider || a.source || 'News',
-        a.country || 'US',
         origin,
         new Date(a.published_at || a.ingested_at),
-        type,
         severity,
+        a.event_type || 'news',
         a.url,
+        a.image_url || undefined,
       );
     });
   } catch (err) {
@@ -205,11 +176,6 @@ async function fetchFromUnifiedTable(): Promise<Claim[]> {
   }
 }
 
-function mapEventType(t: string): InfoEventType {
-  if (t === 'kinetic' || t === 'escalation' || t === 'cyber') return 'verification';
-  if (t === 'humanitarian') return 'correction';
-  return 'verification';
-}
 
 function mapSeverity(s: string): SeverityTier {
   if (s === 'critical') return 'critical';
@@ -230,7 +196,7 @@ interface ScrapedTopic {
   scraped_at: string;
 }
 
-async function fetchScrapedTopicsFallback(): Promise<Claim[]> {
+async function fetchScrapedTopicsFallback(): Promise<LiveArticle[]> {
   try {
     const res = await fetch(
       `${CMNN_SCRAPER_URL}/rest/v1/scraped_topics?order=scraped_at.desc&limit=50`,
@@ -246,16 +212,15 @@ async function fetchScrapedTopicsFallback(): Promise<Claim[]> {
 
     return topics.map((t) => {
       const origin = geocodeTitle(t.title);
-      const { type, severity } = classifyTitle(t.title);
-      return makeClaim(
+      const { severity, category } = classifyTitle(t.title);
+      return makeArticle(
         `scraper-${t.id}`,
         t.title,
         t.source || 'News',
-        'US',
         origin,
         new Date(t.scraped_at),
-        type,
         severity,
+        t.category || 'news',
         t.url,
       );
     });
@@ -267,39 +232,46 @@ async function fetchScrapedTopicsFallback(): Promise<Claim[]> {
 
 // ============ Aggregator ============
 
-let cachedResult: { claims: Claim[]; sources: string[]; ts: number } | null = null;
+let cachedResult: { articles: LiveArticle[]; claims: Claim[]; sources: string[]; ts: number } | null = null;
 
-export async function fetchAllSources(): Promise<{ claims: Claim[]; sources: string[] }> {
+/**
+ * Fetch live news from all sources.
+ * Returns both raw LiveArticles AND converted Claims (for renderers that need full type).
+ */
+export async function fetchAllSources(): Promise<{ claims: Claim[]; articles: LiveArticle[]; sources: string[] }> {
   if (cachedResult && Date.now() - cachedResult.ts < FEED_SOURCES.CACHE_TTL_MS) {
-    return { claims: cachedResult.claims, sources: cachedResult.sources };
+    return { claims: cachedResult.claims, articles: cachedResult.articles, sources: cachedResult.sources };
   }
 
   // Primary: unified news_articles table (has GDELT + scraper + NewsAPI)
-  let claims = await fetchFromUnifiedTable();
+  let articles = await fetchFromUnifiedTable();
   const sources: string[] = [];
 
-  if (claims.length > 0) {
-    sources.push(`Unified (${claims.length})`);
+  if (articles.length > 0) {
+    sources.push(`Unified (${articles.length})`);
   } else {
     // Fallback: direct scraper query
     console.warn('[Feed] Unified table empty, falling back to scraper');
-    claims = await fetchScrapedTopicsFallback();
-    if (claims.length > 0) {
-      sources.push(`Scraper fallback (${claims.length})`);
+    articles = await fetchScrapedTopicsFallback();
+    if (articles.length > 0) {
+      sources.push(`Scraper fallback (${articles.length})`);
     }
   }
 
   // Deduplicate
   const seenTitles = new Set<string>();
-  const deduped: Claim[] = [];
-  for (const claim of claims) {
-    const normalized = claim.headline.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 60);
+  const deduped: LiveArticle[] = [];
+  for (const article of articles) {
+    const normalized = article.headline.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 60);
     if (seenTitles.has(normalized)) continue;
     seenTitles.add(normalized);
-    deduped.push(claim);
+    deduped.push(article);
   }
 
-  cachedResult = { claims: deduped, sources, ts: Date.now() };
+  // Convert to Claims for renderers that need the full type
+  const claims = deduped.map(articleToClaim);
+
+  cachedResult = { articles: deduped, claims, sources, ts: Date.now() };
   console.log(`[Feed] ${deduped.length} articles from ${sources.join(', ')}`);
-  return { claims: deduped, sources };
+  return { claims, articles: deduped, sources };
 }

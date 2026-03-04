@@ -34,7 +34,59 @@ export const INFO_EVENT_COLORS: Record<InfoEventType, string> = {
 };
 
 // ============================================================
-// CLAIM — The atomic unit of The Feed
+// LIVE ARTICLE — Simplified type for real-time news
+// ============================================================
+
+export interface LiveArticle {
+  id: string;
+  headline: string;
+  source: string;
+  url?: string;
+  origin: GeoCoord;
+  timestamp: string;
+  severity: SeverityTier;
+  category: string; // e.g. 'kinetic', 'economic', 'diplomatic', 'news'
+  imageUrl?: string;
+}
+
+/** Convert a LiveArticle to a full Claim for renderers that expect it. */
+export function articleToClaim(a: LiveArticle): Claim {
+  const typeMap: Record<string, InfoEventType> = {
+    kinetic: 'verification', escalation: 'verification', cyber: 'verification',
+    economic: 'verification', diplomatic: 'correction', humanitarian: 'correction',
+    news: 'verification',
+  };
+  return {
+    id: a.id,
+    scenarioId: 'live',
+    headline: a.headline,
+    body: a.headline,
+    mediaType: 'article',
+    mediaUrl: a.imageUrl,
+    infoEventType: typeMap[a.category] || 'verification',
+    misinfoTaxonomy: [],
+    truthScore: 50,
+    severityTier: a.severity,
+    origin: a.origin,
+    propagationRadius: 200,
+    timestamp: a.timestamp,
+    source: { name: a.source, type: 'digital_native', country: 'US', credibilityRating: 60, isStateAffiliated: false, platform: 'website' },
+    amplifiers: [],
+    propagation: { speed: 'steady', pattern: 'organic_viral', peakVelocity: 1000, halfLife: 12, crossPlatformHops: 1 },
+    reach: { estimatedImpressions: 0, shares: 0, engagementRate: 0, countriesReached: ['US'], languagesSpread: ['en'] },
+    verificationStatus: 'unverified',
+    groundTruthSummary: '',
+    evidenceLinks: [],
+  };
+}
+
+/** Type guard: is this a LiveArticle or a full Claim? */
+export function isLiveArticle(item: LiveArticle | Claim): item is LiveArticle {
+  return !('scenarioId' in item);
+}
+
+// ============================================================
+// CLAIM — Full type for scenario/simulation mode
 // ============================================================
 
 export interface Claim {

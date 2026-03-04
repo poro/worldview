@@ -551,3 +551,44 @@
     display: none;
   }
 }
+
+/* === Scrub Overlay === */
+
+.scrub-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  pointer-events: none;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.scrub-overlay.visible {
+  opacity: 1;
+}
+
+.scrub-overlay-offset {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 96px;
+  font-weight: 700;
+  color: #00ffcc;
+  text-shadow:
+    0 0 40px rgba(0, 255, 204, 0.5),
+    0 0 80px rgba(0, 255, 204, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.8);
+  letter-spacing: -2px;
+  line-height: 1;
+}
+
+.scrub-overlay-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 28px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  margin-top: 8px;
+  letter-spacing: 2px;
+}

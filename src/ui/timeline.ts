@@ -44,6 +44,10 @@ export class Timeline {
   private speedPresetsContainer: HTMLElement | null = null;
   private ticksLayer: HTMLElement | null = null;
 
+  // Scrub overlay
+  private scrubOverlay: HTMLElement | null = null;
+  private scrubOverlayTimeout: ReturnType<typeof setTimeout> | null = null;
+
   // State
   private rangeMs: number = DEFAULT_RANGE_MS;
   private rangeStart: Date = new Date(Date.now() - DEFAULT_RANGE_MS);
@@ -167,6 +171,15 @@ export class Timeline {
     this.speedPresetsContainer = this.root.querySelector('#tl-speed-presets')!;
     this.ticksLayer = this.root.querySelector('#tl-ticks')!;
 
+    // Scrub overlay (large center-screen time offset)
+    this.scrubOverlay = document.createElement('div');
+    this.scrubOverlay.className = 'scrub-overlay';
+    this.scrubOverlay.innerHTML = `
+      <div class="scrub-overlay-offset">-00:00</div>
+      <div class="scrub-overlay-time">00:00:00Z</div>
+    `;
+    document.body.appendChild(this.scrubOverlay);
+
     // Initial render
     this.renderLabels();
     this.renderTicks();
@@ -272,6 +285,7 @@ export class Timeline {
     const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     const time = new Date(this.rangeStart.getTime() + x * this.rangeMs);
     this.timeController.seekTo(time);
+    this.showScrubOverlay();
   }
 
   // --- Keyboard Shortcuts ---
@@ -294,19 +308,21 @@ export class Timeline {
       case 'ArrowLeft':
         e.preventDefault();
         if (e.shiftKey) {
-          this.timeController.stepBy(-3600000); // -1 hour
+          this.timeController.stepBy(-3600000);
         } else {
-          this.timeController.stepBy(-60000); // -1 minute
+          this.timeController.stepBy(-60000);
         }
+        this.showScrubOverlay();
         break;
 
       case 'ArrowRight':
         e.preventDefault();
         if (e.shiftKey) {
-          this.timeController.stepBy(3600000); // +1 hour
+          this.timeController.stepBy(3600000);
         } else {
-          this.timeController.stepBy(60000); // +1 minute
+          this.timeController.stepBy(60000);
         }
+        this.showScrubOverlay();
         break;
     }
   }
@@ -320,6 +336,7 @@ export class Timeline {
       this.modeBadge!.className = 'timeline-mode-badge live';
       this.liveBtn!.classList.add('active');
       this.timeDisplay!.className = 'timeline-time-display';
+      this.hideScrubOverlay();
     } else {
       this.modeBadge!.textContent = 'REPLAY';
       this.modeBadge!.className = 'timeline-mode-badge replay';
@@ -524,6 +541,48 @@ export class Timeline {
         }
       }
     }, SCRUBBER_REFRESH_MS);
+  }
+
+  // --- Scrub Overlay ---
+
+  private showScrubOverlay() {
+    if (!this.scrubOverlay) return;
+    const now = Date.now();
+    const effective = this.timeController.getEffectiveTime().getTime();
+    const diffMs = effective - now;
+    const absDiff = Math.abs(diffMs);
+    const sign = diffMs <= 0 ? '-' : '+';
+
+    let offsetStr: string;
+    if (absDiff < 60000) {
+      offsetStr = `${sign}${Math.round(absDiff / 1000)}s`;
+    } else if (absDiff < 3600000) {
+      const mins = Math.floor(absDiff / 60000);
+      const secs = Math.floor((absDiff % 60000) / 1000);
+      offsetStr = `${sign}${mins}m ${String(secs).padStart(2, '0')}s`;
+    } else {
+      const hrs = Math.floor(absDiff / 3600000);
+      const mins = Math.floor((absDiff % 3600000) / 60000);
+      offsetStr = `${sign}${hrs}h ${String(mins).padStart(2, '0')}m`;
+    }
+
+    const t = this.timeController.getEffectiveTime();
+    const timeStr = `${String(t.getUTCHours()).padStart(2, '0')}:${String(t.getUTCMinutes()).padStart(2, '0')}:${String(t.getUTCSeconds()).padStart(2, '0')}Z`;
+
+    this.scrubOverlay.querySelector('.scrub-overlay-offset')!.textContent = offsetStr;
+    this.scrubOverlay.querySelector('.scrub-overlay-time')!.textContent = timeStr;
+    this.scrubOverlay.classList.add('visible');
+
+    // Auto-hide after 2s of inactivity
+    if (this.scrubOverlayTimeout) clearTimeout(this.scrubOverlayTimeout);
+    this.scrubOverlayTimeout = setTimeout(() => {
+      this.scrubOverlay?.classList.remove('visible');
+    }, 2000);
+  }
+
+  private hideScrubOverlay() {
+    if (this.scrubOverlayTimeout) clearTimeout(this.scrubOverlayTimeout);
+    this.scrubOverlay?.classList.remove('visible');
   }
 
   // --- Helpers ---

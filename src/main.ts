@@ -1,5 +1,7 @@
 import './style.css';
 import { smartInterval } from './tick';
+import { bus } from './bus';
+import { initKeyboard } from './keyboard';
 import * as Cesium from 'cesium';
 import { createViewer, flyToLocation, flyToCinematic, initGoogle3DTiles, toggleGoogle3D } from './globe/viewer';
 import { FlightTracker } from './flights/tracker';
@@ -31,8 +33,8 @@ import { FilterBar } from './ui/filter-bar';
 import { ViewModeManager } from './ui/view-modes';
 import { RightPanel } from './ui/right-panel';
 import { AircraftPopup } from './ui/aircraft-popup';
-import { toggleHelp, isHelpVisible } from './ui/help-overlay';
-import { registerCommands, openPalette, closePalette, isPaletteOpen } from './ui/command-palette';
+import { toggleHelp } from './ui/help-overlay';
+import { registerCommands, openPalette } from './ui/command-palette';
 import { CONFLICT_EVENTS } from './data/events';
 import { INFO_EVENTS } from './data/events-info';
 import { INFO_EVENT_COLORS } from './feed/types';
@@ -350,166 +352,62 @@ handler.setInputAction((click: { position: Cesium.Cartesian2 }) => {
   maritimeTracker.selectByMmsi(null);
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-// Keyboard shortcuts
-document.addEventListener('keydown', (e) => {
-  // Don't capture if input is focused (except command palette)
-  if (document.activeElement?.tagName === 'INPUT') return;
+// ============================================================
+// Bus subscriptions — keyboard.ts emits, main.ts dispatches
+// ============================================================
+initKeyboard();
 
-  // Command palette
-  if (e.key === '/') {
-    e.preventDefault();
-    openPalette();
-    return;
-  }
-  if (isPaletteOpen()) return; // swallow all keys when palette is open
+bus.on('filter:set', (index: number, mode: string) => {
+  filterManager.setByIndex(index);
+  controls.setActiveFilter(mode as FilterMode);
+  effectsPanel.setFilter(mode as FilterMode);
+});
 
-  // Help overlay
-  if (e.key === '?') {
-    toggleHelp();
-    return;
+bus.on('layer:toggle', (layer: string) => {
+  switch (layer) {
+    case 'cctv': cctvLayer.toggle(); controls.setLayerState('cctv', cctvLayer.visible); break;
+    case 'flights': flightTracker.toggle(); controls.setLayerState('flights', flightTracker.visible); break;
+    case 'satellites': satRenderer.toggle(); controls.setLayerState('satellites', satRenderer.visible); break;
+    case 'earthquakes': earthquakeLayer.toggle(); controls.setLayerState('earthquakes', earthquakeLayer.visible); break;
+    case 'traffic': trafficParticles.toggle(); controls.setLayerState('traffic', trafficParticles.visible); break;
+    case 'military': flightTracker.toggleMilitary(); controls.setLayerState('military', flightTracker.militaryMode); break;
+    case 'feed': feedManager.toggleFeedLayer(); break;
+    case 'fog': feedManager.toggleFogOverlay(); break;
+    case 'network': feedManager.toggleNetworkGraph(); break;
+    case 'gps': gpsLayer.toggle(); controls.showToast(gpsLayer.visible ? 'GPS INTERFERENCE ON' : 'GPS INTERFERENCE OFF'); break;
+    case 'airspace': airspaceLayer.toggle(); controls.showToast(airspaceLayer.visible ? 'NO-FLY ZONES ON' : 'NO-FLY ZONES OFF'); break;
+    case 'strikes': lazyStart('strikes', () => strikeLayer.load()); strikeLayer.toggle(); controls.showToast(strikeLayer.visible ? 'STRIKES ON' : 'STRIKES OFF'); break;
+    case 'shipping': lazyStart('shipping', () => shippingLayer.load()); shippingLayer.toggle(); controls.showToast(shippingLayer.visible ? 'SHIPPING LANES ON' : 'SHIPPING LANES OFF'); break;
+    case 'maritime': maritimeTracker.toggle(); controls.setLayerState('maritime', maritimeTracker.visible); break;
   }
-  if (isHelpVisible()) {
-    toggleHelp(); // any key closes help
-    return;
-  }
+});
 
-  switch (e.key) {
-    case '1':
-      filterManager.setByIndex(0);
-      controls.setActiveFilter('normal');
-      effectsPanel.setFilter('normal');
-      break;
-    case '2':
-      filterManager.setByIndex(1);
-      controls.setActiveFilter('nightvision');
-      effectsPanel.setFilter('nightvision');
-      break;
-    case '3':
-      filterManager.setByIndex(2);
-      controls.setActiveFilter('flir');
-      effectsPanel.setFilter('flir');
-      break;
-    case '4':
-      filterManager.setByIndex(3);
-      controls.setActiveFilter('crt');
-      effectsPanel.setFilter('crt');
-      break;
-    case '5':
-      filterManager.setByIndex(4);
-      controls.setActiveFilter('enhanced');
-      effectsPanel.setFilter('enhanced');
-      break;
-    case 'c':
-    case 'C':
-      cctvLayer.toggle();
-      controls.setLayerState('cctv', cctvLayer.visible);
-      break;
-    case 'f':
-    case 'F':
-      flightTracker.toggle();
-      controls.setLayerState('flights', flightTracker.visible);
-      break;
-    case 's':
-    case 'S':
-      satRenderer.toggle();
-      controls.setLayerState('satellites', satRenderer.visible);
-      break;
-    case 'g':
-    case 'G':
-      earthquakeLayer.toggle();
-      controls.setLayerState('earthquakes', earthquakeLayer.visible);
-      break;
-    case 't':
-    case 'T':
-      trafficParticles.toggle();
-      controls.setLayerState('traffic', trafficParticles.visible);
-      break;
-    case 'm':
-    case 'M':
-      flightTracker.toggleMilitary();
-      controls.setLayerState('military', flightTracker.militaryMode);
-      break;
-    case 'n':
-    case 'N':
-      feedManager.toggleFeedLayer();
-      break;
-    case 'h':
-    case 'H':
-      hud.toggle();
-      break;
-    case 'v':
-    case 'V':
-      viewScoutPanel.toggle();
-      break;
-    // Location presets
-    case 'q': case 'Q':
-    case 'w': case 'W':
-    case 'e': case 'E':
-    case 'r': case 'R':
-    case 'o': case 'O':
-    case 'y': case 'Y':
-    case 'u': case 'U':
-    case 'i': case 'I': {
-      const preset = LOCATION_PRESETS.find((p) => p.key === e.key.toUpperCase());
-      if (preset) navigateToPreset(preset);
-      break;
-    }
-    case '/':
-      e.preventDefault();
-      (window as { __searchInput?: HTMLInputElement }).__searchInput?.focus();
-      break;
-    // Overlay toggles
-    case 'j':
-    case 'J':
-      feedManager.toggleFogOverlay();
-      break;
-    case 'k':
-    case 'K':
-      feedManager.toggleNetworkGraph();
-      break;
-    case 'd':
-    case 'D':
-      gpsLayer.toggle();
-      controls.showToast(gpsLayer.visible ? 'GPS INTERFERENCE ON' : 'GPS INTERFERENCE OFF');
-      break;
-    case 'z':
-    case 'Z':
-      airspaceLayer.toggle();
-      controls.showToast(airspaceLayer.visible ? 'NO-FLY ZONES ON' : 'NO-FLY ZONES OFF');
-      break;
-    case 'x':
-    case 'X':
-      lazyStart('strikes', () => strikeLayer.load());
-      strikeLayer.toggle();
-      controls.showToast(strikeLayer.visible ? 'STRIKES ON' : 'STRIKES OFF');
-      break;
-    case 'l':
-    case 'L':
-      lazyStart('shipping', () => shippingLayer.load());
-      shippingLayer.toggle();
-      controls.showToast(shippingLayer.visible ? 'SHIPPING LANES ON' : 'SHIPPING LANES OFF');
-      break;
-    case 'b':
-    case 'B':
-      maritimeTracker.toggle();
-      controls.setLayerState('maritime', maritimeTracker.visible);
-      break;
-    // Quick zoom: Iran theater
-    case 'p':
-    case 'P':
-      flyToCinematic(viewer, 53, 32, 3000000, 2);
-      controls.showToast('NAVIGATING → IRAN THEATER');
-      break;
-    case 'Escape':
-      if (isPaletteOpen()) { closePalette(); break; }
-      if (isHelpVisible()) { toggleHelp(); break; }
-      detailPanel.hide();
-      flightTracker.selectByIcao(null);
-      satRenderer.selectByNoradId(null);
-      maritimeTracker.selectByMmsi(null);
-      cctvLayer.closeFeedPanel();
-      break;
+bus.on('ui:toggle', (panel: string) => {
+  switch (panel) {
+    case 'hud': hud.toggle(); break;
+    case 'viewscout': viewScoutPanel.toggle(); break;
   }
+});
+
+bus.on('nav:preset', (key: string) => {
+  const preset = LOCATION_PRESETS.find((p) => p.key === key);
+  if (preset) navigateToPreset(preset);
+});
+
+bus.on('nav:flyto', (lon: number, lat: number, alt: number, duration?: number) => {
+  flyToCinematic(viewer, lon, lat, alt, duration || 2);
+});
+
+bus.on('ui:toast', (message: string) => {
+  controls.showToast(message);
+});
+
+bus.on('entity:deselect', () => {
+  detailPanel.hide();
+  flightTracker.selectByIcao(null);
+  satRenderer.selectByNoradId(null);
+  maritimeTracker.selectByMmsi(null);
+  cctvLayer.closeFeedPanel();
 });
 
 // Search handler

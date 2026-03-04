@@ -34,7 +34,7 @@ export const CONFLICT_EVENTS: ConflictEvent[] = [
 
   // ============ DAY 1 — Feb 28, 2026 (H-Hour + Initial Strikes) ============
 
-  { id: 'E-001', type: 'escalation', title: 'DEFCON 2 DECLARED', time: '2026-02-28T01:00:00Z', lat: 38.87, lon: -77.06, description: 'US Strategic Command elevates to DEFCON 2 — highest peacetime alert level', global: true },
+  { id: 'E-001', type: 'escalation', title: 'DEFCON 4 — ELEVATED MONITORING', time: '2026-03-02T13:00:00Z', lat: 38.87, lon: -77.06, description: 'DEFCON 4 (Condition Blue) — No imminent nuclear threat; Middle East theatre requires closer monitoring', global: true },
   { id: 'K-001', type: 'kinetic', title: 'SEAD OPENING SALVO', time: '2026-02-28T02:10:00Z', lat: 35.69, lon: 51.31, description: 'AGM-88G AARGM-ER targeting S-300PMU2 battery and Bavar-373 protecting Tehran' },
   { id: 'K-002', type: 'kinetic', title: 'NATANZ PENETRATION', time: '2026-02-28T02:15:00Z', lat: 33.72, lon: 51.73, description: 'B-2 Spirit penetrating strike on Natanz enrichment facility — GBU-57 MOP bunker busters' },
   { id: 'K-003', type: 'kinetic', title: 'ISFAHAN NUCLEAR CENTER', time: '2026-02-28T02:18:00Z', lat: 32.65, lon: 51.68, description: 'Strikes on Isfahan UCF — secondary explosions observed via infrared satellite' },

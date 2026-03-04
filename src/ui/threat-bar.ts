@@ -17,7 +17,7 @@ interface ThreatState {
 export class ThreatBar {
   private el: HTMLElement;
   private state: ThreatState = {
-    defcon: 3,
+    defcon: 4,
     conflicts: 0,
     criticalEvents: 0,
     threatLevel: 'ELEVATED',

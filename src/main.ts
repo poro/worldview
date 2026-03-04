@@ -32,6 +32,7 @@ import { EventCardLayer } from './layers/event-cards';
 import { HexBinLayer } from './layers/hex-bins';
 import { NewsTicker } from './ui/news-ticker';
 import { ThreatBar } from './ui/threat-bar';
+import { DataSourcesPanel } from './ui/data-sources';
 import { FilterBar } from './ui/filter-bar';
 import { ViewModeManager } from './ui/view-modes';
 import { RightPanel } from './ui/right-panel';
@@ -280,6 +281,12 @@ const newsTicker = new NewsTicker();
 
 // Threat bar — top-right status indicators
 const threatBar = new ThreatBar();
+
+// Data sources panel — bottom-left health indicators
+const dataSourcesPanel = new DataSourcesPanel();
+bus.on('source:update', (id: string, count: number) => {
+  dataSourcesPanel.updateSource(id, 'active', count);
+});
 bus.on('feed:loaded', (_count: number, articles: import('./feed/types').LiveArticle[]) => {
   newsTicker.setArticles(articles);
 });

@@ -255,6 +255,9 @@ export class FlightTracker {
       if (!data.states) return;
 
       this.lastUpdate = Date.now();
+      // Notify data sources panel
+      const { bus } = await import('../bus');
+      bus.emit('source:update', 'flights', data.states.length);
       const currentIcaos = new Set<string>();
       this.militaryIcaos.clear();
       this.militaryClassifications.clear();

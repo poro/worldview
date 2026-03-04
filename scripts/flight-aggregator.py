@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 """Server-side flight data aggregator.
 
-Primary: OpenSky Network API (authenticated, ~6000+ aircraft, single call)
-Fallback: adsb.fi open data (26 regional calls)
-
-Writes flights.json for the Vite dev server to serve.
-Run every 15 seconds via systemd timer.
+Merges OpenSky Network (authenticated, US-heavy) + adsb.fi (global coverage).
+Deduplicates by ICAO hex. Writes flights.json every 15s via systemd timer.
 """
 
 import argparse
@@ -17,19 +14,16 @@ from urllib.request import urlopen, Request
 from urllib.error import URLError
 from urllib.parse import urlencode
 
-# === OpenSky Network (Primary) ===
+# === OpenSky Network ===
 
 OPENSKY_TOKEN_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 OPENSKY_STATES_URL = "https://opensky-network.org/api/states/all"
 OPENSKY_CLIENT_ID = "endless-api-client"
 OPENSKY_CLIENT_SECRET = "2xFeE45Jh9y1osph7ulhsYrIAzBHoMJW"
-
-# Cache token across runs via file
 TOKEN_CACHE = "/tmp/opensky-token.json"
 
 
 def get_opensky_token() -> str | None:
-    """Get OAuth2 token, using file cache if still valid."""
     try:
         with open(TOKEN_CACHE) as f:
             cached = json.load(f)
@@ -37,7 +31,6 @@ def get_opensky_token() -> str | None:
                 return cached["access_token"]
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
         pass
-
     try:
         data = urlencode({
             "grant_type": "client_credentials",
@@ -57,8 +50,8 @@ def get_opensky_token() -> str | None:
         return None
 
 
-def fetch_opensky(token: str) -> list | None:
-    """Fetch all states from OpenSky. Returns list of aircraft dicts in adsb.fi-compatible format."""
+def fetch_opensky(token: str) -> tuple[list, set]:
+    """Returns (aircraft_list, seen_hex_set) from OpenSky."""
     try:
         req = Request(OPENSKY_STATES_URL)
         req.add_header("Authorization", f"Bearer {token}")
@@ -67,35 +60,39 @@ def fetch_opensky(token: str) -> list | None:
             data = json.loads(resp.read())
             states = data.get("states")
             if not states:
-                return None
+                return [], set()
 
-            # Convert OpenSky state vectors to adsb.fi-compatible format
             aircraft = []
+            seen = set()
             for s in states:
                 if s[5] is None or s[6] is None:
-                    continue  # skip aircraft without position
+                    continue
+                hex_id = s[0].strip() if s[0] else ""
+                if not hex_id:
+                    continue
+                seen.add(hex_id)
                 ac = {
-                    "hex": s[0].strip() if s[0] else "",
+                    "hex": hex_id,
                     "flight": s[1].strip() if s[1] else "",
-                    "r": s[2] or "Unknown",  # origin_country
+                    "r": s[2] or "Unknown",
                     "lat": s[6],
                     "lon": s[5],
-                    "alt_baro": "ground" if s[8] else (round(s[7] / 0.3048) if s[7] is not None else None),  # m→ft
+                    "alt_baro": "ground" if s[8] else (round(s[7] / 0.3048) if s[7] is not None else None),
                     "alt_geom": round(s[13] / 0.3048) if s[13] is not None else None,
-                    "gs": round(s[9] / 0.514444, 1) if s[9] is not None else None,  # m/s→kts
+                    "gs": round(s[9] / 0.514444, 1) if s[9] is not None else None,
                     "track": s[10],
-                    "baro_rate": round(s[11] / 0.00508) if s[11] is not None else None,  # m/s→fpm
+                    "baro_rate": round(s[11] / 0.00508) if s[11] is not None else None,
                     "squawk": s[14],
                     "_source": "opensky",
                 }
                 aircraft.append(ac)
-            return aircraft
+            return aircraft, seen
     except Exception as e:
         print(f"[OpenSky] Fetch error: {e}", file=sys.stderr)
-        return None
+        return [], set()
 
 
-# === adsb.fi Fallback ===
+# === adsb.fi (global coverage) ===
 
 REGIONS = [
     {"lat": 40, "lon": -100}, {"lat": 35, "lon": -80}, {"lat": 47, "lon": -120},
@@ -112,11 +109,10 @@ REGIONS = [
 ADSB_FI_BASE = "https://opendata.adsb.fi/api/v2/lat/{lat}/lon/{lon}/dist/250"
 
 
-def fetch_adsbfi() -> tuple[list, int, int]:
-    """Fallback: fetch from adsb.fi regions. Returns (aircraft, success_count, total_regions)."""
-    seen = set()
-    all_aircraft = []
-    success_count = 0
+def fetch_adsbfi(already_seen: set) -> tuple[list, int]:
+    """Fetch from adsb.fi, dedup against already_seen. Returns (new_aircraft, regions_ok)."""
+    new_aircraft = []
+    regions_ok = 0
 
     for i, region in enumerate(REGIONS):
         url = ADSB_FI_BASE.format(lat=region["lat"], lon=region["lon"])
@@ -126,18 +122,18 @@ def fetch_adsbfi() -> tuple[list, int, int]:
                 data = json.loads(resp.read().decode())
                 aircraft = data.get("aircraft", data.get("ac", []))
                 if aircraft:
-                    success_count += 1
+                    regions_ok += 1
                     for ac in aircraft:
                         hex_id = ac.get("hex", ac.get("icao24", ""))
-                        if hex_id and hex_id not in seen:
-                            seen.add(hex_id)
-                            all_aircraft.append(ac)
+                        if hex_id and hex_id not in already_seen:
+                            already_seen.add(hex_id)
+                            new_aircraft.append(ac)
         except Exception:
             pass
         if i < len(REGIONS) - 1:
-            time.sleep(0.5)
+            time.sleep(0.15)
 
-    return all_aircraft, success_count, len(REGIONS)
+    return new_aircraft, regions_ok
 
 
 # === Main ===
@@ -148,41 +144,39 @@ def main():
     args = parser.parse_args()
 
     start = time.time()
-    source = "opensky"
+    all_aircraft = []
+    sources = []
 
-    # Try OpenSky first
+    # 1. OpenSky (fast, single call, great US coverage)
     token = get_opensky_token()
-    aircraft = None
-    regions_info = ""
-
+    seen = set()
     if token:
-        aircraft = fetch_opensky(token)
-        if aircraft:
-            regions_info = "1/1 (global)"
+        opensky_ac, seen = fetch_opensky(token)
+        if opensky_ac:
+            all_aircraft.extend(opensky_ac)
+            sources.append(f"opensky:{len(opensky_ac)}")
 
-    # Fallback to adsb.fi
-    if not aircraft:
-        source = "adsb.fi"
-        aircraft, success, total = fetch_adsbfi()
-        regions_info = f"{success}/{total}"
-        if not aircraft:
-            aircraft = []
+    # 2. adsb.fi (fill in global gaps, dedup against OpenSky)
+    adsbfi_ac, adsbfi_regions = fetch_adsbfi(seen)
+    if adsbfi_ac:
+        all_aircraft.extend(adsbfi_ac)
+        sources.append(f"adsb.fi:{len(adsbfi_ac)}({adsbfi_regions}/{len(REGIONS)})")
 
     elapsed = time.time() - start
 
     result = {
         "now": time.time(),
-        "aircraft": aircraft,
-        "source": source,
-        "regions": regions_info,
-        "total_regions": 1 if source == "opensky" else len(REGIONS),
+        "aircraft": all_aircraft,
+        "source": "+".join(sources) if sources else "none",
+        "regions": f"merged",
+        "total_regions": len(REGIONS) + 1,
         "generated": datetime.now(timezone.utc).isoformat(),
     }
 
     with open(args.output, "w") as f:
         json.dump(result, f)
 
-    print(f"[Flights] {len(aircraft)} aircraft via {source} ({regions_info}) in {elapsed:.1f}s → {args.output}")
+    print(f"[Flights] {len(all_aircraft)} aircraft ({' + '.join(sources)}) in {elapsed:.1f}s")
 
 
 if __name__ == "__main__":

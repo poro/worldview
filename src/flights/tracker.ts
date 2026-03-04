@@ -388,6 +388,7 @@ export class FlightTracker {
       }
 
       this._militaryCategoryCounts = categoryCounts;
+      console.log(`[WORLDVIEW] Tracker: ${this.entities.size} entities, ${this.militaryIcaos.size} military, visible=${this._visible}, milMode=${this._militaryMode}, viewer.entities.values.length=${this.viewer.entities.values.length}`);
       this.onCountUpdate?.(this.flights.size);
       this.onMilitaryCountUpdate?.(this.militaryIcaos.size, categoryCounts);
 

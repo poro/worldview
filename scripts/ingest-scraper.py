@@ -62,9 +62,10 @@ def fetch_json(url: str, headers: dict) -> any:
 
 def post_json(url: str, headers: dict, data: list) -> int:
     body = json.dumps(data).encode()
-    req = Request(url, data=body, headers={**headers, 'Content-Type': 'application/json', 'Prefer': 'resolution=ignore-duplicates,return=minimal'}, method='POST')
+    req = Request(url, data=body, headers={**headers, 'Content-Type': 'application/json', 'Prefer': 'resolution=ignore-duplicates,return=representation'}, method='POST')
     with urlopen(req, timeout=15) as resp:
-        return resp.status
+        inserted = json.loads(resp.read().decode())
+        return len(inserted) if isinstance(inserted, list) else resp.status
 
 def main():
     limit = int(sys.argv[1]) if len(sys.argv) > 1 else 50
@@ -104,8 +105,8 @@ def main():
     # Insert into WorldView
     wv_headers = {'apikey': WV_KEY, 'Authorization': f'Bearer {WV_KEY}'}
     try:
-        status = post_json(f"{WV_URL}/rest/v1/news_articles", wv_headers, articles)
-        print(f"[Scraper→WV] Inserted {len(articles)} articles (HTTP {status})")
+        inserted = post_json(f"{WV_URL}/rest/v1/news_articles?on_conflict=url", wv_headers, articles)
+        print(f"[Scraper→WV] Inserted {inserted} new articles (skipped duplicates by url)")
     except Exception as e:
         print(f"[Scraper→WV] Insert failed: {e}")
 

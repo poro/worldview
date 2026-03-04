@@ -932,3 +932,22 @@
   color: rgba(255, 255, 255, 0.15);
   letter-spacing: 1px;
 }
+
+/* ============================================================
+   Scan Line Effect — subtle CRT/military aesthetic
+   ============================================================ */
+.scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  mix-blend-mode: multiply;
+}
+.scanlines.off { display: none; }

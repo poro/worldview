@@ -1,7 +1,5 @@
 import type { Claim, GeoCoord, InfoEventType, SeverityTier } from './types';
 import { FEED_SOURCES } from './config';
-import { fetchConflictNews } from './gdelt';
-
 // ============ Geocoding Map ============
 const KEYWORD_LOCATIONS: Array<{ keywords: string[]; lat: number; lon: number }> = [
   { keywords: ['iran', 'tehran', 'persian'], lat: 35.7, lon: 51.4 },
@@ -133,8 +131,95 @@ function makeClaim(
   };
 }
 
-// ============ Source: CMNN Scraped Topics ============
+// ============ Unified Source: Supabase news_articles ============
 
+// All sources (GDELT, scraper, NewsAPI) are ingested server-side into one table.
+// Client just queries Supabase — fast, reliable, always has data.
+
+const WORLDVIEW_SUPABASE = 'https://mxbfffebroitdogmxolp.supabase.co';
+const WORLDVIEW_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14YmZmZmVicm9pdGRvZ214b2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1Nzc1NjcsImV4cCI6MjA4ODE1MzU2N30.bF6455VlQ50xMz0GS54R7S7ERWA5qpW5-fz-Uq6ziqg';
+
+// Also keep the CMNN scraper as a direct fallback (in case news_articles is empty)
+const CMNN_SCRAPER_URL = FEED_SOURCES.CMNN_SCRAPER_SUPABASE_URL;
+const CMNN_SCRAPER_KEY = FEED_SOURCES.CMNN_SCRAPER_SUPABASE_KEY;
+
+interface NewsArticle {
+  id: number;
+  source: string;
+  provider: string;
+  url: string;
+  title: string;
+  summary: string | null;
+  category: string;
+  lat: number | null;
+  lon: number | null;
+  geo_source: string | null;
+  country: string | null;
+  severity: string;
+  event_type: string;
+  published_at: string;
+  ingested_at: string;
+  image_url: string | null;
+  tone: number | null;
+}
+
+async function fetchFromUnifiedTable(): Promise<Claim[]> {
+  try {
+    const res = await fetch(
+      `${WORLDVIEW_SUPABASE}/rest/v1/news_articles?order=ingested_at.desc&limit=${FEED_SOURCES.MAX_ARTICLES}`,
+      {
+        headers: {
+          apikey: WORLDVIEW_SUPABASE_KEY,
+          Authorization: `Bearer ${WORLDVIEW_SUPABASE_KEY}`,
+        },
+      }
+    );
+    if (!res.ok) throw new Error(`Supabase ${res.status}`);
+    const articles: NewsArticle[] = await res.json();
+
+    return articles.map((a) => {
+      // Use DB lat/lon if available, otherwise geocode from title
+      const origin = (a.lat != null && a.lon != null)
+        ? { lat: a.lat + jitter() * 0.2, lon: a.lon + jitter() * 0.2 }
+        : geocodeTitle(a.title);
+
+      const { type, severity } = (a.severity && a.event_type)
+        ? { type: mapEventType(a.event_type), severity: mapSeverity(a.severity) }
+        : classifyTitle(a.title);
+
+      return makeClaim(
+        `news-${a.id}`,
+        a.title,
+        a.provider || a.source || 'News',
+        a.country || 'US',
+        origin,
+        new Date(a.published_at || a.ingested_at),
+        type,
+        severity,
+        a.url,
+      );
+    });
+  } catch (err) {
+    console.warn('[Feed/Supabase] news_articles failed:', err);
+    return [];
+  }
+}
+
+function mapEventType(t: string): InfoEventType {
+  if (t === 'kinetic' || t === 'escalation' || t === 'cyber') return 'verification';
+  if (t === 'humanitarian') return 'correction';
+  return 'verification';
+}
+
+function mapSeverity(s: string): SeverityTier {
+  if (s === 'critical') return 'critical';
+  if (s === 'high') return 'high';
+  if (s === 'moderate') return 'moderate';
+  if (s === 'low') return 'low';
+  return 'low';
+}
+
+// Fallback: direct scraper query (in case news_articles table is empty)
 interface ScrapedTopic {
   id: number;
   source: string;
@@ -145,21 +230,21 @@ interface ScrapedTopic {
   scraped_at: string;
 }
 
-async function fetchScrapedTopics(): Promise<Claim[]> {
+async function fetchScrapedTopicsFallback(): Promise<Claim[]> {
   try {
     const res = await fetch(
-      `${FEED_SOURCES.CMNN_SCRAPER_SUPABASE_URL}/rest/v1/scraped_topics?order=scraped_at.desc&limit=50`,
+      `${CMNN_SCRAPER_URL}/rest/v1/scraped_topics?order=scraped_at.desc&limit=50`,
       {
         headers: {
-          apikey: FEED_SOURCES.CMNN_SCRAPER_SUPABASE_KEY,
-          Authorization: `Bearer ${FEED_SOURCES.CMNN_SCRAPER_SUPABASE_KEY}`,
+          apikey: CMNN_SCRAPER_KEY,
+          Authorization: `Bearer ${CMNN_SCRAPER_KEY}`,
         },
       }
     );
-    if (!res.ok) throw new Error(`Supabase ${res.status}`);
+    if (!res.ok) throw new Error(`Scraper fallback ${res.status}`);
     const topics: ScrapedTopic[] = await res.json();
 
-    return topics.map((t, i) => {
+    return topics.map((t) => {
       const origin = geocodeTitle(t.title);
       const { type, severity } = classifyTitle(t.title);
       return makeClaim(
@@ -175,78 +260,12 @@ async function fetchScrapedTopics(): Promise<Claim[]> {
       );
     });
   } catch (err) {
-    console.warn('[Feed/Scraper] Failed:', err);
-    return [];
-  }
-}
-
-// ============ Source: NewsAPI ============
-
-interface NewsApiArticle {
-  title: string;
-  description: string;
-  url: string;
-  source: { name: string };
-  publishedAt: string;
-}
-
-async function fetchNewsApi(): Promise<Claim[]> {
-  const key = FEED_SOURCES.NEWSAPI_KEY;
-  if (!key) return [];
-
-  try {
-    const res = await fetch(
-      `https://newsapi.org/v2/top-headlines?country=us&pageSize=30&apiKey=${key}`
-    );
-    if (!res.ok) throw new Error(`NewsAPI ${res.status}`);
-    const data = await res.json();
-    const articles: NewsApiArticle[] = data.articles || [];
-
-    return articles.map((a, i) => {
-      const origin = geocodeTitle(a.title);
-      const { type, severity } = classifyTitle(a.title);
-      return makeClaim(
-        `newsapi-${i}-${Date.now()}`,
-        a.title,
-        a.source?.name || 'NewsAPI',
-        'US',
-        origin,
-        new Date(a.publishedAt),
-        type,
-        severity,
-        a.url,
-      );
-    });
-  } catch (err) {
-    console.warn('[Feed/NewsAPI] Failed:', err);
-    return [];
-  }
-}
-
-// ============ Source: GDELT (existing) ============
-
-async function fetchGdeltSource(): Promise<Claim[]> {
-  try {
-    // Wrap in a race with timeout
-    const result = await Promise.race([
-      fetchConflictNews(),
-      new Promise<Claim[]>(resolve =>
-        setTimeout(() => resolve([]), FEED_SOURCES.GDELT_TIMEOUT_MS)
-      ),
-    ]);
-    return result;
-  } catch (err) {
-    console.warn('[Feed/GDELT] Failed:', err);
+    console.warn('[Feed/Scraper Fallback] Failed:', err);
     return [];
   }
 }
 
 // ============ Aggregator ============
-
-interface SourceResult {
-  name: string;
-  claims: Claim[];
-}
 
 let cachedResult: { claims: Claim[]; sources: string[]; ts: number } | null = null;
 
@@ -255,35 +274,32 @@ export async function fetchAllSources(): Promise<{ claims: Claim[]; sources: str
     return { claims: cachedResult.claims, sources: cachedResult.sources };
   }
 
-  const results = await Promise.allSettled([
-    fetchScrapedTopics().then(claims => ({ name: 'Scraper', claims } as SourceResult)),
-    fetchGdeltSource().then(claims => ({ name: 'GDELT', claims } as SourceResult)),
-    fetchNewsApi().then(claims => ({ name: 'NewsAPI', claims } as SourceResult)),
-  ]);
+  // Primary: unified news_articles table (has GDELT + scraper + NewsAPI)
+  let claims = await fetchFromUnifiedTable();
+  const sources: string[] = [];
 
-  const allClaims: Claim[] = [];
-  const activeSources: string[] = [];
-  const seenTitles = new Set<string>();
-
-  for (const result of results) {
-    if (result.status !== 'fulfilled') continue;
-    const { name, claims } = result.value;
-    if (claims.length === 0) continue;
-    activeSources.push(`${name} (${claims.length})`);
-
-    for (const claim of claims) {
-      const normalized = claim.headline.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 60);
-      if (seenTitles.has(normalized)) continue;
-      seenTitles.add(normalized);
-      allClaims.push(claim);
+  if (claims.length > 0) {
+    sources.push(`Unified (${claims.length})`);
+  } else {
+    // Fallback: direct scraper query
+    console.warn('[Feed] Unified table empty, falling back to scraper');
+    claims = await fetchScrapedTopicsFallback();
+    if (claims.length > 0) {
+      sources.push(`Scraper fallback (${claims.length})`);
     }
   }
 
-  // Sort by timestamp descending
-  allClaims.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  const capped = allClaims.slice(0, FEED_SOURCES.MAX_ARTICLES);
+  // Deduplicate
+  const seenTitles = new Set<string>();
+  const deduped: Claim[] = [];
+  for (const claim of claims) {
+    const normalized = claim.headline.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 60);
+    if (seenTitles.has(normalized)) continue;
+    seenTitles.add(normalized);
+    deduped.push(claim);
+  }
 
-  cachedResult = { claims: capped, sources: activeSources, ts: Date.now() };
-  console.log(`[Feed] ${capped.length} articles from ${activeSources.join(', ')}`);
-  return { claims: capped, sources: activeSources };
+  cachedResult = { claims: deduped, sources, ts: Date.now() };
+  console.log(`[Feed] ${deduped.length} articles from ${sources.join(', ')}`);
+  return { claims: deduped, sources };
 }

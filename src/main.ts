@@ -30,6 +30,8 @@ import { FilterBar } from './ui/filter-bar';
 import { ViewModeManager } from './ui/view-modes';
 import { RightPanel } from './ui/right-panel';
 import { AircraftPopup } from './ui/aircraft-popup';
+import { toggleHelp, isHelpVisible } from './ui/help-overlay';
+import { registerCommands, openPalette, closePalette, isPaletteOpen } from './ui/command-palette';
 import { CONFLICT_EVENTS } from './data/events';
 import { INFO_EVENTS } from './data/events-info';
 import { INFO_EVENT_COLORS } from './feed/types';
@@ -157,6 +159,17 @@ function navigateToPreset(preset: LocationPreset) {
   controls.showToast(`NAVIGATING \u2192 ${preset.label.toUpperCase()}`);
 }
 
+// Lazy-start tracking — layers only initialize when first toggled ON
+const layerStarted: Record<string, boolean> = { flights: true }; // flights starts at boot
+
+async function lazyStart(id: string, startFn: () => Promise<void> | void) {
+  if (!layerStarted[id]) {
+    layerStarted[id] = true;
+    try { await startFn(); console.log(`[WORLDVIEW] ${id} ✓`); }
+    catch (e) { console.warn(`[WORLDVIEW] ${id} failed:`, e); }
+  }
+}
+
 // Controls
 const controls = new Controls({
   onFilterChange: (mode: FilterMode) => {
@@ -169,14 +182,17 @@ const controls = new Controls({
     controls.setLayerState('flights', flightTracker.visible);
   },
   onToggleSatellites: () => {
+    lazyStart('satellites', () => satRenderer.start());
     satRenderer.toggle();
     controls.setLayerState('satellites', satRenderer.visible);
   },
   onToggleEarthquakes: () => {
+    lazyStart('earthquakes', () => { earthquakeLayer.load(); hud.updateQuakeCount(earthquakeLayer.quakeCount); });
     earthquakeLayer.toggle();
     controls.setLayerState('earthquakes', earthquakeLayer.visible);
   },
   onToggleTraffic: () => {
+    lazyStart('traffic', () => trafficParticles.start());
     trafficParticles.toggle();
     controls.setLayerState('traffic', trafficParticles.visible);
   },
@@ -185,6 +201,7 @@ const controls = new Controls({
     controls.setLayerState('military', flightTracker.militaryMode);
   },
   onToggleCCTV: () => {
+    
     cctvLayer.toggle();
     controls.setLayerState('cctv', cctvLayer.visible);
   },
@@ -201,6 +218,7 @@ const controls = new Controls({
     viewScoutPanel.toggle();
   },
   onToggleMaritime: () => {
+    lazyStart('maritime', () => maritimeTracker.start());
     maritimeTracker.toggle();
     controls.setLayerState('maritime', maritimeTracker.visible);
   },
@@ -261,13 +279,13 @@ const filterBar = new FilterBar({
     switch (id) {
       case 'commercial': flightTracker.toggle(); break;
       case 'military': flightTracker.toggleMilitary(); break;
-      case 'gps-jamming': gpsLayer.toggle(); break;
+      case 'gps-jamming': lazyStart('gps', () => gpsLayer.load()); gpsLayer.toggle(); break;
       case 'ground-truth': eventCardLayer.toggle(); break;
-      case 'imaging-sats': satRenderer.toggle(); break;
-      case 'maritime': maritimeTracker.toggle(); break;
-      case 'airspace': airspaceLayer.toggle(); break;
-      case 'blackout': internetBlackoutLayer.toggle(); break;
-      case 'borders': countryLayer.toggle(); break;
+      case 'imaging-sats': lazyStart('satellites', () => satRenderer.start()); satRenderer.toggle(); break;
+      case 'maritime': lazyStart('maritime', () => maritimeTracker.start()); maritimeTracker.toggle(); break;
+      case 'airspace': lazyStart('airspace', () => airspaceLayer.load()); airspaceLayer.toggle(); break;
+      case 'blackout': lazyStart('blackout', () => internetBlackoutLayer.load()); internetBlackoutLayer.toggle(); break;
+      case 'borders': lazyStart('borders', () => countryLayer.load()); countryLayer.toggle(); break;
       // Event type filters
       case 'evt-kinetic':
       case 'evt-retaliation':
@@ -333,8 +351,26 @@ handler.setInputAction((click: { position: Cesium.Cartesian2 }) => {
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-  // Don't capture if input is focused
+  // Don't capture if input is focused (except command palette)
   if (document.activeElement?.tagName === 'INPUT') return;
+
+  // Command palette
+  if (e.key === '/') {
+    e.preventDefault();
+    openPalette();
+    return;
+  }
+  if (isPaletteOpen()) return; // swallow all keys when palette is open
+
+  // Help overlay
+  if (e.key === '?') {
+    toggleHelp();
+    return;
+  }
+  if (isHelpVisible()) {
+    toggleHelp(); // any key closes help
+    return;
+  }
 
   switch (e.key) {
     case '1':
@@ -442,11 +478,13 @@ document.addEventListener('keydown', (e) => {
       break;
     case 'x':
     case 'X':
+      lazyStart('strikes', () => strikeLayer.load());
       strikeLayer.toggle();
       controls.showToast(strikeLayer.visible ? 'STRIKES ON' : 'STRIKES OFF');
       break;
     case 'l':
     case 'L':
+      lazyStart('shipping', () => shippingLayer.load());
       shippingLayer.toggle();
       controls.showToast(shippingLayer.visible ? 'SHIPPING LANES ON' : 'SHIPPING LANES OFF');
       break;
@@ -462,6 +500,8 @@ document.addEventListener('keydown', (e) => {
       controls.showToast('NAVIGATING → IRAN THEATER');
       break;
     case 'Escape':
+      if (isPaletteOpen()) { closePalette(); break; }
+      if (isHelpVisible()) { toggleHelp(); break; }
       detailPanel.hide();
       flightTracker.selectByIcao(null);
       satRenderer.selectByNoradId(null);
@@ -560,83 +600,23 @@ async function boot() {
     controls.showToast('3D TILES UNAVAILABLE', 'error');
   }
 
-  // Start traffic particle system
-  trafficParticles.start();
-
-  // Start data feeds (parallel) — each wrapped in error boundary
-  const results = await Promise.allSettled([
-    flightTracker.start().catch((e: Error) => {
-      console.warn('[WORLDVIEW] Flights failed:', e);
-      controls.showToast('FLIGHT DATA UNAVAILABLE', 'error');
-    }),
-    satRenderer.start().catch((e: Error) => {
-      console.warn('[WORLDVIEW] Satellites failed:', e);
-      controls.showToast('SATELLITE DATA UNAVAILABLE', 'error');
-    }),
-    earthquakeLayer.load().catch((e: Error) => {
-      console.warn('[WORLDVIEW] Earthquakes failed:', e);
-      controls.showToast('EARTHQUAKE DATA UNAVAILABLE', 'error');
-    }),
-    maritimeTracker.start().catch((e: Error) => {
-      console.warn('[WORLDVIEW] Maritime failed:', e);
-      controls.showToast('MARITIME DATA UNAVAILABLE', 'error');
-    }),
-  ]);
-
-  const names = ['Flights', 'Satellites', 'Earthquakes', 'Maritime'];
-  results.forEach((r, i) => {
-    if (r.status === 'fulfilled') {
-      console.log(`[WORLDVIEW] ${names[i]} \u2713`);
-    } else {
-      console.warn(`[WORLDVIEW] ${names[i]} failed:`, r.reason);
-      controls.showToast(`${names[i].toUpperCase()} SYSTEM FAILED`, 'error');
-    }
-  });
-
-  // Update earthquake count
-  hud.updateQuakeCount(earthquakeLayer.quakeCount);
-
-  // Load conflict overlays
+  // Only start flights at boot — other layers start on-demand when toggled
   try {
-    strikeLayer.load();
-    console.log('[WORLDVIEW] Strikes ✓');
-  } catch (e) { console.warn('[WORLDVIEW] Strikes failed:', e); }
+    await flightTracker.start();
+    console.log('[WORLDVIEW] Flights ✓');
+  } catch (e) {
+    console.warn('[WORLDVIEW] Flights failed:', e);
+    controls.showToast('FLIGHT DATA UNAVAILABLE', 'error');
+  }
 
-  try {
-    gpsLayer.load();
-    console.log('[WORLDVIEW] GPS Interference ✓');
-  } catch (e) { console.warn('[WORLDVIEW] GPS Interference failed:', e); }
-
-  try {
-    airspaceLayer.load();
-    console.log('[WORLDVIEW] Airspace ✓');
-  } catch (e) { console.warn('[WORLDVIEW] Airspace failed:', e); }
-
-  try {
-    shippingLayer.load();
-    console.log('[WORLDVIEW] Shipping ✓');
-  } catch (e) { console.warn('[WORLDVIEW] Shipping failed:', e); }
-
-  // Load new visual overhaul layers
-  try {
-    await countryLayer.load();
-    console.log('[WORLDVIEW] Country Borders ✓');
-  } catch (e) { console.warn('[WORLDVIEW] Country Borders failed:', e); }
-
-  try {
-    internetBlackoutLayer.load();
-    console.log('[WORLDVIEW] Internet Blackout ✓');
-  } catch (e) { console.warn('[WORLDVIEW] Internet Blackout failed:', e); }
-
+  // Load only event cards at boot — all other overlays load on-demand via filter bar
   try {
     eventCardLayer.load();
     console.log('[WORLDVIEW] Event Cards ✓');
   } catch (e) { console.warn('[WORLDVIEW] Event Cards failed:', e); }
 
-  try {
-    hexBinLayer.load();
-    console.log('[WORLDVIEW] Hex Bins ✓');
-  } catch (e) { console.warn('[WORLDVIEW] Hex Bins failed:', e); }
+  // Register lazy loaders for conflict overlays (triggered by filter bar toggles)
+  // These will load on first toggle via the filterBar onToggle handler
 
   // Load The Feed — information warfare layer
   try {
@@ -646,6 +626,45 @@ async function boot() {
   } catch (e) { console.warn('[WORLDVIEW] The Feed failed:', e); }
 
   console.log('[WORLDVIEW] All systems online.');
+
+  // Register command palette commands
+  registerCommands([
+    // Layers
+    { id: 'flights', label: 'Toggle Flights', section: 'LAYERS', shortcut: 'F', action: () => { flightTracker.toggle(); controls.setLayerState('flights', flightTracker.visible); }},
+    { id: 'satellites', label: 'Toggle Satellites', section: 'LAYERS', shortcut: 'S', action: () => { lazyStart('satellites', () => satRenderer.start()); satRenderer.toggle(); controls.setLayerState('satellites', satRenderer.visible); }},
+    { id: 'maritime', label: 'Toggle Maritime / Ships', section: 'LAYERS', shortcut: 'M', action: () => { lazyStart('maritime', () => maritimeTracker.start()); maritimeTracker.toggle(); controls.setLayerState('maritime', maritimeTracker.visible); }},
+    { id: 'traffic', label: 'Toggle Traffic', section: 'LAYERS', shortcut: 'T', action: () => { lazyStart('traffic', () => trafficParticles.start()); trafficParticles.toggle(); controls.setLayerState('traffic', trafficParticles.visible); }},
+    { id: 'quakes', label: 'Toggle Earthquakes', section: 'LAYERS', shortcut: 'G', action: () => { lazyStart('earthquakes', () => earthquakeLayer.load()); earthquakeLayer.toggle(); controls.setLayerState('earthquakes', earthquakeLayer.visible); }},
+    { id: 'cctv', label: 'Toggle CCTV Feeds', section: 'LAYERS', shortcut: 'C', action: () => { cctvLayer.toggle(); controls.setLayerState('cctv', cctvLayer.visible); }},
+    { id: 'events', label: 'Toggle Event Cards', section: 'LAYERS', action: () => eventCardLayer.toggle() },
+    { id: 'gps', label: 'Toggle GPS Interference', section: 'LAYERS', action: () => { lazyStart('gps', () => gpsLayer.load()); gpsLayer.toggle(); }},
+    { id: 'strikes', label: 'Toggle Strike Markers', section: 'LAYERS', shortcut: 'W', action: () => { lazyStart('strikes', () => strikeLayer.load()); strikeLayer.toggle(); }},
+    { id: 'shipping', label: 'Toggle Shipping Lanes', section: 'LAYERS', shortcut: 'L', action: () => { lazyStart('shipping', () => shippingLayer.load()); shippingLayer.toggle(); }},
+    { id: 'airspace', label: 'Toggle Airspace Zones', section: 'LAYERS', action: () => { lazyStart('airspace', () => airspaceLayer.load()); airspaceLayer.toggle(); }},
+    { id: 'blackout', label: 'Toggle Internet Blackout', section: 'LAYERS', action: () => { lazyStart('blackout', () => internetBlackoutLayer.load()); internetBlackoutLayer.toggle(); }},
+    { id: 'borders', label: 'Toggle Country Borders', section: 'LAYERS', shortcut: 'B', action: () => { lazyStart('borders', () => countryLayer.load()); countryLayer.toggle(); }},
+    { id: 'hexbins', label: 'Toggle Hex Bins', section: 'LAYERS', shortcut: 'X', action: () => { lazyStart('hexbins', () => hexBinLayer.load()); hexBinLayer.toggle(); }},
+    // Feed
+    { id: 'news', label: 'Toggle Live News Feed', section: 'FEED', shortcut: 'N', action: () => feedManager.toggleFeedLayer() },
+    { id: 'scenario', label: 'Load Epic Fury Scenario', section: 'FEED', action: () => feedManager.loadScenario('epic-fury') },
+    // Navigation
+    ...LOCATION_PRESETS.map(p => ({
+      id: `nav-${p.key}`, label: `Navigate → ${p.label}`, section: 'NAVIGATE', shortcut: p.key,
+      action: () => { flyToCinematic(viewer, p.lon, p.lat, p.alt, 2); controls.showToast(`NAVIGATING → ${p.label}`); },
+    })),
+    { id: 'iran', label: 'Navigate → Iran Theater', section: 'NAVIGATE', shortcut: 'P', action: () => { flyToCinematic(viewer, 53, 32, 3000000, 2); controls.showToast('NAVIGATING → IRAN THEATER'); }},
+    // Visual Filters
+    { id: 'filter-normal', label: 'Filter: Normal', section: 'VISUAL', action: () => { filterManager.setFilter('normal'); controls.setActiveFilter('normal'); }},
+    { id: 'filter-nvg', label: 'Filter: Night Vision', section: 'VISUAL', action: () => { filterManager.setFilter('nightvision'); controls.setActiveFilter('nightvision'); }},
+    { id: 'filter-flir', label: 'Filter: FLIR / Thermal', section: 'VISUAL', action: () => { filterManager.setFilter('flir'); controls.setActiveFilter('flir'); }},
+    { id: 'filter-crt', label: 'Filter: CRT', section: 'VISUAL', action: () => { filterManager.setFilter('crt'); controls.setActiveFilter('crt'); }},
+    { id: 'filter-enhanced', label: 'Filter: Enhanced', section: 'VISUAL', action: () => { filterManager.setFilter('enhanced'); controls.setActiveFilter('enhanced'); }},
+    // Tools
+    { id: 'viewscout', label: 'Toggle ViewScout', section: 'TOOLS', shortcut: 'V', action: () => viewScoutPanel.toggle() },
+    { id: '3d', label: 'Toggle 3D Tiles', section: 'TOOLS', shortcut: 'D', action: () => { const enabled = toggleGoogle3D(viewer); controls.setTileMode(enabled); }},
+    { id: 'hud', label: 'Toggle HUD', section: 'TOOLS', shortcut: 'H', action: () => hud.toggle() },
+    { id: 'help', label: 'Show Keyboard Shortcuts', section: 'TOOLS', shortcut: '?', action: () => toggleHelp() },
+  ]);
 }
 
 boot();

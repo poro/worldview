@@ -109,11 +109,11 @@ export class Controls {
     const layers = [
       { id: 'flights', label: 'FLIGHTS', icon: '\u2708', key: 'F', active: true },
       { id: 'military', label: 'MILITARY', icon: '\u25C6', key: 'M', active: false },
-      { id: 'satellites', label: 'SATS', icon: '\u25C9', key: 'S', active: true },
-      { id: 'earthquakes', label: 'QUAKES', icon: '\u25CE', key: 'G', active: true },
-      { id: 'traffic', label: 'TRAFFIC', icon: '\u25CF', key: 'T', active: true },
-      { id: 'cctv', label: 'CCTV', icon: '\u25CE', key: 'C', active: true },
-      { id: 'maritime', label: 'SHIPS', icon: '\u2693', key: 'N', active: true },
+      { id: 'satellites', label: 'SATS', icon: '\u25C9', key: 'S', active: false },
+      { id: 'earthquakes', label: 'QUAKES', icon: '\u25CE', key: 'G', active: false },
+      { id: 'traffic', label: 'TRAFFIC', icon: '\u25CF', key: 'T', active: false },
+      { id: 'cctv', label: 'CCTV', icon: '\u25CE', key: 'C', active: false },
+      { id: 'maritime', label: 'SHIPS', icon: '\u2693', key: 'N', active: false },
       { id: 'viewscout', label: 'VIEWSCOUT', icon: '\u2295', key: 'V', active: false },
     ];
 

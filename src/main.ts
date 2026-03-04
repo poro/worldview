@@ -34,6 +34,7 @@ import { NewsTicker } from './ui/news-ticker';
 import { ThreatBar } from './ui/threat-bar';
 import { DataSourcesPanel } from './ui/data-sources';
 import { BootSplash } from './ui/splash';
+import { initPicking, registerPickable } from './picking';
 import { FilterBar } from './ui/filter-bar';
 import { ViewModeManager } from './ui/view-modes';
 import { RightPanel } from './ui/right-panel';
@@ -351,28 +352,18 @@ void aircraftPopup;
 void threatBar;
 void dataSourcesPanel;
 
-// Entity picking
-const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-handler.setInputAction((click: { position: Cesium.Cartesian2 }) => {
-  const picked = viewer.scene.pick(click.position);
-  if (picked) {
-    if (flightTracker.handlePick(picked)) return;
-    if (satRenderer.handlePick(picked)) return;
-    if (earthquakeLayer.handlePick(picked)) return;
-    if (cctvLayer.handlePick(picked)) return;
-    if (maritimeTracker.handlePick(picked)) return;
-    if (strikeLayer.handlePick(picked)) return;
-    if (gpsLayer.handlePick(picked)) return;
-    if (airspaceLayer.handlePick(picked)) return;
-    if (shippingLayer.handlePick(picked)) return;
-    if (eventCardLayer.handlePick(picked)) return;
-  }
-  // Clicked empty space — deselect
-  detailPanel.hide();
-  flightTracker.selectByIcao(null);
-  satRenderer.selectByNoradId(null);
-  maritimeTracker.selectByMmsi(null);
-}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+// Entity picking — layer registry pattern
+initPicking(viewer);
+registerPickable(flightTracker);
+registerPickable(satRenderer);
+registerPickable(earthquakeLayer);
+registerPickable(cctvLayer);
+registerPickable(maritimeTracker);
+registerPickable(strikeLayer);
+registerPickable(gpsLayer);
+registerPickable(airspaceLayer);
+registerPickable(shippingLayer);
+registerPickable(eventCardLayer);
 
 // ============================================================
 // Bus subscriptions — keyboard.ts emits, main.ts dispatches

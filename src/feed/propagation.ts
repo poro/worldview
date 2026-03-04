@@ -1,3 +1,4 @@
+import { smartInterval, clearSmartInterval } from '../tick';
 // ============================================================
 // PropagationRenderer — Animated concentric rings showing claim spread
 // Uses timer-based fixed updates (NOT CallbackProperty — see git history)
@@ -21,13 +22,13 @@ export class PropagationRenderer {
   private viewer: Cesium.Viewer;
   private propagations: Map<string, PropagationState> = new Map();
   private _visible: boolean = false;
-  private updateTimer: ReturnType<typeof setInterval> | null = null;
+  private updateTimer: number | null = null;
 
   constructor(viewer: Cesium.Viewer) {
     this.viewer = viewer;
 
     // Timer-based update — NOT CallbackProperty (see critical rule #4)
-    this.updateTimer = setInterval(() => {
+    this.updateTimer = smartInterval(() => {
       if (this._visible) {
         this.tick();
       }
@@ -142,7 +143,7 @@ export class PropagationRenderer {
   }
 
   destroy() {
-    if (this.updateTimer) clearInterval(this.updateTimer);
+    if (this.updateTimer) clearSmartInterval(this.updateTimer);
     for (const [, state] of this.propagations) {
       for (const entity of state.entities) {
         this.viewer.entities.remove(entity);

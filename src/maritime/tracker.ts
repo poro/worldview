@@ -1,3 +1,4 @@
+import { smartInterval, clearSmartInterval } from '../tick';
 import * as Cesium from 'cesium';
 import { fetchVessels } from './api';
 import { Vessel, VesselType } from './types';
@@ -40,7 +41,7 @@ export class MaritimeTracker {
   private trailEntities: Map<string, Cesium.Entity> = new Map();
   private vessels: Map<string, Vessel> = new Map();
   private positionHistory: Map<string, { lon: number; lat: number }[]> = new Map();
-  private interval: ReturnType<typeof setInterval> | null = null;
+  private interval: number | null = null;
   private lastUpdate: number = 0;
   private _visible: boolean = true;
   private _selectedVessel: Vessel | null = null;
@@ -77,12 +78,12 @@ export class MaritimeTracker {
 
   async start() {
     await this.update();
-    this.interval = setInterval(() => this.update(), MARITIME_UPDATE_INTERVAL);
+    this.interval = smartInterval(() => this.update(), MARITIME_UPDATE_INTERVAL);
   }
 
   stop() {
     if (this.interval) {
-      clearInterval(this.interval);
+      clearSmartInterval(this.interval);
       this.interval = null;
     }
   }

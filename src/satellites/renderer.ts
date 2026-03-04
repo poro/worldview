@@ -1,3 +1,4 @@
+import { smartInterval, clearSmartInterval } from '../tick';
 import * as Cesium from 'cesium';
 import { TLERecord, fetchTLEs } from './tle';
 import { propagateSatellite, computeOrbitPath, SatellitePosition } from './propagator';
@@ -27,7 +28,7 @@ export class SatelliteRenderer {
   private entities: Map<string, Cesium.Entity> = new Map();
   private orbitEntities: Map<string, Cesium.Entity> = new Map();
   private footprintEntities: Map<string, Cesium.Entity> = new Map();
-  private animInterval: ReturnType<typeof setInterval> | null = null;
+  private animInterval: number | null = null;
   private _visible: boolean = true;
   private _activeCategories: Set<string> = new Set(['stations', 'starlink', 'military', 'gps', 'weather']);
   private _selectedSat: SatellitePosition | null = null;
@@ -71,12 +72,12 @@ export class SatelliteRenderer {
   async start() {
     const categories = Array.from(this._activeCategories);
     await Promise.allSettled(categories.map((c) => this.loadCategory(c)));
-    this.animInterval = setInterval(() => this.updatePositions(), SATELLITE_POSITION_UPDATE_INTERVAL);
+    this.animInterval = smartInterval(() => this.updatePositions(), SATELLITE_POSITION_UPDATE_INTERVAL);
   }
 
   stop() {
     if (this.animInterval) {
-      clearInterval(this.animInterval);
+      clearSmartInterval(this.animInterval);
       this.animInterval = null;
     }
   }

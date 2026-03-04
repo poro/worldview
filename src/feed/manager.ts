@@ -1,3 +1,4 @@
+import { smartInterval, clearSmartInterval } from '../tick';
 // ============================================================
 // FeedManager — Orchestrates the entire Feed layer
 // ============================================================
@@ -35,8 +36,8 @@ export class FeedManager {
   private _fogVisible: boolean = false;
   private _networksVisible: boolean = false;
   private _mode: FeedMode = 'live';
-  private updateInterval: ReturnType<typeof setInterval> | null = null;
-  private liveRefreshInterval: ReturnType<typeof setInterval> | null = null;
+  private updateInterval: number | null = null;
+  private liveRefreshInterval: number | null = null;
   private unsubscribeTime: (() => void) | null = null;
   private onFlyTo: ((lon: number, lat: number) => void) | null = null;
   private onToast: ((msg: string) => void) | null = null;
@@ -71,7 +72,7 @@ export class FeedManager {
     });
 
     // Start update loop for propagation animation
-    this.updateInterval = setInterval(() => this.update(), 1000);
+    this.updateInterval = smartInterval(() => this.update(), 1000);
 
     // Pre-render hook for card positioning
     this.viewer.scene.preRender.addEventListener(() => {
@@ -118,7 +119,7 @@ export class FeedManager {
 
   startLiveRefresh(intervalMs: number = 5 * 60 * 1000) {
     this.stopLiveRefresh();
-    this.liveRefreshInterval = setInterval(() => {
+    this.liveRefreshInterval = smartInterval(() => {
       if (this._mode === 'live' && this._feedVisible) {
         this.loadLive();
       }
@@ -127,7 +128,7 @@ export class FeedManager {
 
   stopLiveRefresh() {
     if (this.liveRefreshInterval) {
-      clearInterval(this.liveRefreshInterval);
+      clearSmartInterval(this.liveRefreshInterval);
       this.liveRefreshInterval = null;
     }
   }
@@ -307,7 +308,7 @@ export class FeedManager {
   }
 
   destroy() {
-    if (this.updateInterval) clearInterval(this.updateInterval);
+    if (this.updateInterval) clearSmartInterval(this.updateInterval);
     this.stopLiveRefresh();
     if (this.unsubscribeTime) this.unsubscribeTime();
     this.claimRenderer.destroy();

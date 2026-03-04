@@ -1,3 +1,4 @@
+import { smartInterval, clearSmartInterval } from '../tick';
 import * as Cesium from 'cesium';
 import { fetchFlights } from './api';
 import { FlightState, parseFlightState } from './types';
@@ -53,7 +54,7 @@ export class FlightTracker {
   private militaryIcaos: Set<string> = new Set();
   private militaryClassifications: Map<string, MilitaryClassification> = new Map();
   private _militaryCategoryCounts: MilitaryCategoryCounts = emptyCategoryCounts();
-  private interval: ReturnType<typeof setInterval> | null = null;
+  private interval: number | null = null;
   private lastUpdate: number = 0;
   private _visible: boolean = true;
   private _militaryMode: boolean = false;
@@ -89,12 +90,12 @@ export class FlightTracker {
 
   async start() {
     await this.update();
-    this.interval = setInterval(() => this.update(), FLIGHT_UPDATE_INTERVAL);
+    this.interval = smartInterval(() => this.update(), FLIGHT_UPDATE_INTERVAL);
   }
 
   stop() {
     if (this.interval) {
-      clearInterval(this.interval);
+      clearSmartInterval(this.interval);
       this.interval = null;
     }
   }

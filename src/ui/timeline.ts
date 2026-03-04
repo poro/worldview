@@ -1,3 +1,4 @@
+import { smartInterval, clearSmartInterval } from '../tick';
 // ============================================
 // Timeline UI Component
 // Horizontal timeline bar with scrubber, playback
@@ -49,8 +50,8 @@ export class Timeline {
   private rangeEnd: Date = new Date();
   private events: TimelineEvent[] = [];
   private isDragging: boolean = false;
-  private refreshInterval: ReturnType<typeof setInterval> | null = null;
-  private eventFetchTimer: ReturnType<typeof setInterval> | null = null;
+  private refreshInterval: number | null = null;
+  private eventFetchTimer: number | null = null;
   private unsubscribeTime: (() => void) | null = null;
 
   constructor(timeController: TimeController, callbacks: TimelineCallbacks = {}, eventAdapter?: DataAdapter) {
@@ -65,7 +66,7 @@ export class Timeline {
     // Fetch events from adapter if available
     if (this.eventAdapter) {
       this.fetchEvents();
-      this.eventFetchTimer = setInterval(() => this.fetchEvents(), 60000);
+      this.eventFetchTimer = smartInterval(() => this.fetchEvents(), 60000);
     }
   }
 
@@ -87,8 +88,8 @@ export class Timeline {
   }
 
   dispose() {
-    if (this.refreshInterval) clearInterval(this.refreshInterval);
-    if (this.eventFetchTimer) clearInterval(this.eventFetchTimer);
+    if (this.refreshInterval) clearSmartInterval(this.refreshInterval);
+    if (this.eventFetchTimer) clearSmartInterval(this.eventFetchTimer);
     if (this.unsubscribeTime) this.unsubscribeTime();
     if (this.root) this.root.remove();
   }
@@ -513,7 +514,7 @@ export class Timeline {
   // --- Refresh Loop ---
 
   private startRefresh() {
-    this.refreshInterval = setInterval(() => {
+    this.refreshInterval = smartInterval(() => {
       if (!this.isDragging) {
         this.updateScrubber();
         // In live mode, keep labels current

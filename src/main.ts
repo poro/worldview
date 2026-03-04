@@ -1,4 +1,5 @@
 import './style.css';
+import { smartInterval } from './tick';
 import * as Cesium from 'cesium';
 import { createViewer, flyToLocation, flyToCinematic, initGoogle3DTiles, toggleGoogle3D } from './globe/viewer';
 import { FlightTracker } from './flights/tracker';
@@ -571,7 +572,7 @@ function handleSearch(query: string) {
 }
 
 // Data age updater + Feed HUD stats
-setInterval(() => {
+smartInterval(() => {
   const age = Date.now() - flightTracker.lastUpdateTime;
   hud.updateDataAge(age);
   hud.updateFeedStats(

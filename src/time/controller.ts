@@ -1,3 +1,4 @@
+import { smartInterval, clearSmartInterval } from '../tick';
 // ============================================
 // TimeController — Central time state manager
 // Manages LIVE vs REPLAY modes, playback speed,
@@ -25,7 +26,7 @@ export class TimeController {
   private _speed: PlaybackSpeed = 1;
   private _playing: boolean = false;
   private _listeners: Set<TimeChangeCallback> = new Set();
-  private _tickInterval: ReturnType<typeof setInterval> | null = null;
+  private _tickInterval: number | null = null;
   private _lastTickWall: number = 0;
 
   // Tick rate — 50ms for smooth scrubber updates
@@ -144,12 +145,12 @@ export class TimeController {
 
   private startTick() {
     if (this._tickInterval) return;
-    this._tickInterval = setInterval(() => this.tick(), TimeController.TICK_MS);
+    this._tickInterval = smartInterval(() => this.tick(), TimeController.TICK_MS);
   }
 
   private stopTick() {
     if (this._tickInterval) {
-      clearInterval(this._tickInterval);
+      clearSmartInterval(this._tickInterval);
       this._tickInterval = null;
     }
   }

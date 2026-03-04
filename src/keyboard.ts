@@ -8,6 +8,7 @@
 import { bus } from './bus';
 import { openPalette, isPaletteOpen, closePalette } from './ui/command-palette';
 import { toggleHelp, isHelpVisible } from './ui/help-overlay';
+import { toggleLegend } from './ui/legend';
 
 export function initKeyboard() {
   document.addEventListener('keydown', (e) => {
@@ -50,6 +51,7 @@ export function initKeyboard() {
       case 'n': case 'N': bus.emit('layer:toggle', 'feed'); break;
       case 'h': case 'H': bus.emit('ui:toggle', 'hud'); break;
       case 'a': case 'A': bus.emit('ui:toggle', 'ticker'); break;
+      case ';': toggleLegend(); break;
       case 'v': case 'V': bus.emit('ui:toggle', 'viewscout'); break;
       case 'j': case 'J': bus.emit('layer:toggle', 'fog'); break;
       case 'k': case 'K': bus.emit('layer:toggle', 'network'); break;

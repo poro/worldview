@@ -554,6 +554,7 @@ async function boot() {
     { id: '3d', label: 'Toggle 3D Tiles', section: 'TOOLS', shortcut: 'D', action: () => { const enabled = toggleGoogle3D(viewer); controls.setTileMode(enabled); }},
     { id: 'hud', label: 'Toggle HUD', section: 'TOOLS', shortcut: 'H', action: () => hud.toggle() },
     { id: 'help', label: 'Show Keyboard Shortcuts', section: 'TOOLS', shortcut: '?', action: () => toggleHelp() },
+    { id: 'legend', label: 'Event Color Legend', section: 'TOOLS', shortcut: ';', action: () => { import('./ui/legend').then(m => m.toggleLegend()); }},
     { id: 'ticker', label: 'Toggle News Ticker', section: 'TOOLS', shortcut: 'A', action: () => newsTicker.toggle() },
     { id: 'fog', label: 'Toggle Info Fog Overlay', section: 'FEED', shortcut: 'J', action: () => feedManager.toggleFogOverlay() },
     { id: 'network', label: 'Toggle Network Graph', section: 'FEED', shortcut: 'K', action: () => feedManager.toggleNetworkGraph() },

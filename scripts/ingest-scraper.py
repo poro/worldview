@@ -10,7 +10,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from urllib.request import urlopen, Request
-from urllib.error import URLError
+from urllib.error import URLError, HTTPError
 
 # CMNN Scraper Supabase
 CMNN_URL = "https://yxwuuluthfhxafxzruny.supabase.co"
@@ -62,7 +62,7 @@ def fetch_json(url: str, headers: dict) -> any:
 
 def post_json(url: str, headers: dict, data: list) -> int:
     body = json.dumps(data).encode()
-    req = Request(url, data=body, headers={**headers, 'Content-Type': 'application/json', 'Prefer': 'resolution=ignore-duplicates'}, method='POST')
+    req = Request(url, data=body, headers={**headers, 'Content-Type': 'application/json', 'Prefer': 'resolution=ignore-duplicates,return=minimal'}, method='POST')
     with urlopen(req, timeout=15) as resp:
         return resp.status
 

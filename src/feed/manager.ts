@@ -1,4 +1,5 @@
 import { smartInterval, clearSmartInterval } from '../tick';
+import { bus } from '../bus';
 // ============================================================
 // FeedManager — Orchestrates the entire Feed layer
 // ============================================================
@@ -87,7 +88,7 @@ export class FeedManager {
     console.log('[FeedManager] Loading live news feed...');
 
     try {
-      const { claims, sources } = await fetchAllSources();
+      const { claims, articles, sources } = await fetchAllSources();
       if (claims.length === 0) {
         console.warn('[FeedManager] No live articles found from any source');
         this.onToast?.('No live articles found — try again shortly');
@@ -110,6 +111,7 @@ export class FeedManager {
 
       console.log(`[FeedManager] Live feed loaded: ${claims.length} articles`);
       this.onToast?.(`LIVE FEED: ${claims.length} articles loaded`);
+      bus.emit('feed:loaded', claims.length, articles);
     } catch (err) {
       console.error('[FeedManager] Live feed error:', err);
       this.onToast?.('Live feed error — falling back to scenario');
@@ -297,6 +299,11 @@ export class FeedManager {
 
   getTotalClaimCount(): number {
     return this.claims.size;
+  }
+
+  /** Get all current claims as array (for ticker, etc.) */
+  getAllClaims(): Claim[] {
+    return [...this.claims.values()];
   }
 
   getActiveNarrativeCount(): number {

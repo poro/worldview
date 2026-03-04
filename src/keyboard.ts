@@ -49,6 +49,7 @@ export function initKeyboard() {
       case 'm': case 'M': bus.emit('layer:toggle', 'military'); break;
       case 'n': case 'N': bus.emit('layer:toggle', 'feed'); break;
       case 'h': case 'H': bus.emit('ui:toggle', 'hud'); break;
+      case 'a': case 'A': bus.emit('ui:toggle', 'ticker'); break;
       case 'v': case 'V': bus.emit('ui:toggle', 'viewscout'); break;
       case 'j': case 'J': bus.emit('layer:toggle', 'fog'); break;
       case 'k': case 'K': bus.emit('layer:toggle', 'network'); break;

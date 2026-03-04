@@ -700,3 +700,107 @@
   0%, 100% { background: transparent; }
   20% { background: rgba(233,30,99,0.15); }
 }
+
+/* ============================================================
+   News Ticker — Breaking news crawler
+   ============================================================ */
+.news-ticker {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.85);
+  border-top: 1px solid rgba(255, 60, 60, 0.4);
+  display: flex;
+  align-items: center;
+  z-index: 900;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  overflow: hidden;
+}
+.news-ticker-label {
+  flex-shrink: 0;
+  padding: 0 12px;
+  color: #ff3333;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-right: 1px solid rgba(255, 60, 60, 0.3);
+  background: rgba(255, 0, 0, 0.08);
+}
+.ticker-dot {
+  width: 6px;
+  height: 6px;
+  background: #ff3333;
+  border-radius: 50%;
+  animation: ticker-pulse 1.5s ease-in-out infinite;
+}
+@keyframes ticker-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.news-ticker-track-wrapper {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+.news-ticker-track {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  gap: 0;
+  will-change: transform;
+}
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  color: #ccc;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.ticker-item:hover {
+  color: #fff;
+}
+.ticker-empty {
+  color: #666;
+  cursor: default;
+}
+.ticker-severity-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ticker-severity-dot.severity-critical { background: #ff1744; }
+.ticker-severity-dot.severity-high { background: #ff9100; }
+.ticker-severity-dot.severity-moderate { background: #ffea00; }
+.ticker-severity-dot.severity-low { background: #69f0ae; }
+.ticker-time {
+  color: #888;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.ticker-headline {
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ticker-source {
+  color: #666;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.ticker-sep {
+  color: #333;
+  padding: 0 4px;
+}

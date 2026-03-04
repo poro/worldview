@@ -30,6 +30,7 @@ import { CountryLayer } from './layers/countries';
 import { InternetBlackoutLayer } from './layers/internet-blackout';
 import { EventCardLayer } from './layers/event-cards';
 import { HexBinLayer } from './layers/hex-bins';
+import { NewsTicker } from './ui/news-ticker';
 import { FilterBar } from './ui/filter-bar';
 import { ViewModeManager } from './ui/view-modes';
 import { RightPanel } from './ui/right-panel';
@@ -273,6 +274,12 @@ feedManager.setOnToast((msg) => {
   controls.showToast(msg);
 });
 
+// News ticker — live articles scrolling at bottom
+const newsTicker = new NewsTicker();
+bus.on('feed:loaded', (_count: number, articles: import('./feed/types').LiveArticle[]) => {
+  newsTicker.setArticles(articles);
+});
+
 // Aircraft hover popup
 const aircraftPopup = new AircraftPopup(viewer);
 aircraftPopup.setFlightDataProvider((icao) => flightTracker.getFlightData(icao));
@@ -387,6 +394,7 @@ bus.on('ui:toggle', (panel: string) => {
   switch (panel) {
     case 'hud': hud.toggle(); break;
     case 'viewscout': viewScoutPanel.toggle(); break;
+    case 'ticker': newsTicker.toggle(); break;
   }
 });
 

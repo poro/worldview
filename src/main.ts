@@ -31,6 +31,7 @@ import { InternetBlackoutLayer } from './layers/internet-blackout';
 import { EventCardLayer } from './layers/event-cards';
 import { HexBinLayer } from './layers/hex-bins';
 import { NewsTicker } from './ui/news-ticker';
+import { ThreatBar } from './ui/threat-bar';
 import { FilterBar } from './ui/filter-bar';
 import { ViewModeManager } from './ui/view-modes';
 import { RightPanel } from './ui/right-panel';
@@ -276,6 +277,9 @@ feedManager.setOnToast((msg) => {
 
 // News ticker — live articles scrolling at bottom
 const newsTicker = new NewsTicker();
+
+// Threat bar — top-right status indicators
+const threatBar = new ThreatBar();
 bus.on('feed:loaded', (_count: number, articles: import('./feed/types').LiveArticle[]) => {
   newsTicker.setArticles(articles);
 });

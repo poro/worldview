@@ -804,3 +804,48 @@
   color: #333;
   padding: 0 4px;
 }
+
+/* ============================================================
+   Threat Bar — Top-right status indicators
+   ============================================================ */
+.threat-bar {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 2px;
+  z-index: 800;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  pointer-events: auto;
+}
+.tb-item {
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 60px;
+}
+.tb-item:first-child { border-radius: 4px 0 0 4px; }
+.tb-item:last-child { border-radius: 0 4px 4px 0; }
+.tb-label {
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  color: #666;
+  text-transform: uppercase;
+}
+.tb-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+}
+.tb-defcon .tb-value {
+  font-size: 18px;
+}
+.tb-clock .tb-value {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+}

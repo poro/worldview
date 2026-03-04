@@ -56,3 +56,15 @@ export const FEED_CONFIG = {
     contained: 5,
   } as Record<string, number>,
 } as const;
+
+// ============================================================
+// Multi-Source Feed Configuration
+// ============================================================
+export const FEED_SOURCES = {
+  CMNN_SCRAPER_SUPABASE_URL: 'https://yxwuuluthfhxafxzruny.supabase.co',
+  CMNN_SCRAPER_SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4d3V1bHV0aGZoeGFmeHpydW55Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzQ1MjYyNiwiZXhwIjoyMDYzMDI4NjI2fQ.QaETd-TKeIyiFmZDre_lrItyuA1xrdfIYivrBDAkPhA',
+  GDELT_TIMEOUT_MS: 8000,
+  NEWSAPI_KEY: (import.meta as any).env?.VITE_NEWSAPI_KEY || '',
+  CACHE_TTL_MS: 300000, // 5 min
+  MAX_ARTICLES: 100,
+};

@@ -15,7 +15,7 @@ import {
 } from './scenario-epic-fury';
 import { FeedPanel } from '../ui/feed-panel';
 import { fetchClaims, fetchNarratives, fetchBotNetworks, fetchFogZones } from './supabase';
-import { fetchConflictNews } from './gdelt';
+import { fetchAllSources } from './sources';
 
 export type FeedMode = 'live' | 'scenario';
 
@@ -86,12 +86,13 @@ export class FeedManager {
     console.log('[FeedManager] Loading live news feed...');
 
     try {
-      const claims = await fetchConflictNews();
+      const { claims, sources } = await fetchAllSources();
       if (claims.length === 0) {
-        console.warn('[FeedManager] No live articles found');
+        console.warn('[FeedManager] No live articles found from any source');
         this.onToast?.('No live articles found — try again shortly');
         return;
       }
+      console.log(`[FeedManager] Sources: ${sources.join(', ')}`);
 
       // Clear existing claims
       for (const [id] of this.claims) {

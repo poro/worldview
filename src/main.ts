@@ -2,6 +2,7 @@ import './style.css';
 import { smartInterval } from './tick';
 import { bus } from './bus';
 import { initKeyboard } from './keyboard';
+import { handleSearch } from './search';
 import * as Cesium from 'cesium';
 import { createViewer, flyToLocation, flyToCinematic, initGoogle3DTiles, toggleGoogle3D } from './globe/viewer';
 import { FlightTracker } from './flights/tracker';
@@ -212,7 +213,7 @@ const controls = new Controls({
     hud.toggle();
   },
   onSearch: (query: string) => {
-    handleSearch(query);
+    handleSearch(query, viewer);
   },
   onLocationSelect: (preset: LocationPreset) => {
     navigateToPreset(preset);
@@ -409,65 +410,6 @@ bus.on('entity:deselect', () => {
   maritimeTracker.selectByMmsi(null);
   cctvLayer.closeFeedPanel();
 });
-
-// Search handler
-function handleSearch(query: string) {
-  const q = query.trim();
-  if (!q) return;
-
-  // Try lat,lon parsing
-  const latLon = q.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
-  if (latLon) {
-    const lat = parseFloat(latLon[1]);
-    const lon = parseFloat(latLon[2]);
-    flyToLocation(viewer, lon, lat, 500000);
-    return;
-  }
-
-  // Known locations
-  const locations: Record<string, [number, number]> = {
-    'washington': [-77.0369, 38.9072],
-    'dc': [-77.0369, 38.9072],
-    'new york': [-74.006, 40.7128],
-    'nyc': [-74.006, 40.7128],
-    'london': [-0.1276, 51.5074],
-    'paris': [2.3522, 48.8566],
-    'tokyo': [139.6917, 35.6895],
-    'moscow': [37.6173, 55.7558],
-    'beijing': [116.4074, 39.9042],
-    'sydney': [151.2093, -33.8688],
-    'los angeles': [-118.2437, 34.0522],
-    'la': [-118.2437, 34.0522],
-    'chicago': [-87.6298, 41.8781],
-    'dubai': [55.2708, 25.2048],
-    'singapore': [103.8198, 1.3521],
-    'mumbai': [72.8777, 19.076],
-    'cairo': [31.2357, 30.0444],
-    'berlin': [13.405, 52.52],
-    'rome': [12.4964, 41.9028],
-    'seoul': [126.978, 37.5665],
-    'toronto': [-79.3832, 43.6532],
-    'cape town': [18.4241, -33.9249],
-    'rio': [-43.1729, -22.9068],
-    'pentagon': [-77.0558, 38.871],
-    'area 51': [-115.8111, 37.2431],
-    'langley': [-76.4813, 37.0846],
-    'kremlin': [37.6176, 55.7518],
-    'pyongyang': [125.7625, 39.0392],
-    'tehran': [51.389, 35.6892],
-    'iss': [0, 0], // placeholder
-  };
-
-  const key = q.toLowerCase();
-  const match = Object.entries(locations).find(([name]) => key.includes(name));
-  if (match) {
-    flyToLocation(viewer, match[1][0], match[1][1], 500000);
-    return;
-  }
-
-  // Fallback — try as numbers
-  console.log('Search: no match for', q);
-}
 
 // Data age updater + Feed HUD stats
 smartInterval(() => {

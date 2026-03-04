@@ -874,3 +874,61 @@
 .ds-stale { color: #ffea00; }
 .ds-error { color: #ff1744; }
 .ds-off { color: #555; }
+
+/* ============================================================
+   Boot Splash Screen
+   ============================================================ */
+.boot-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: #0a0a0a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.5s ease-out;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+.boot-content {
+  text-align: center;
+  width: 360px;
+}
+.boot-logo {
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: 8px;
+  color: #fff;
+  margin-bottom: 4px;
+  text-shadow: 0 0 40px rgba(0, 200, 255, 0.3);
+}
+.boot-subtitle {
+  font-size: 9px;
+  letter-spacing: 4px;
+  color: rgba(255, 255, 255, 0.3);
+  margin-bottom: 32px;
+}
+.boot-progress-bar {
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.boot-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #00c8ff, #00e676);
+  transition: width 0.3s ease-out;
+}
+.boot-status {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.5);
+  min-height: 16px;
+}
+.boot-version {
+  margin-top: 24px;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.15);
+  letter-spacing: 1px;
+}

@@ -33,6 +33,7 @@ import { HexBinLayer } from './layers/hex-bins';
 import { NewsTicker } from './ui/news-ticker';
 import { ThreatBar } from './ui/threat-bar';
 import { DataSourcesPanel } from './ui/data-sources';
+import { BootSplash } from './ui/splash';
 import { FilterBar } from './ui/filter-bar';
 import { ViewModeManager } from './ui/view-modes';
 import { RightPanel } from './ui/right-panel';
@@ -347,6 +348,8 @@ const rightPanel = new RightPanel({
 void filterBar;
 void rightPanel;
 void aircraftPopup;
+void threatBar;
+void dataSourcesPanel;
 
 // Entity picking
 const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
@@ -443,48 +446,46 @@ smartInterval(() => {
 
 // Start all systems
 async function boot() {
+  const splash = new BootSplash();
+  splash.setSteps(5);
   console.log('[WORLDVIEW] Booting systems...');
 
-  // Set initial camera — global view (user can navigate to theater of interest)
+  // Step 1: Camera
+  splash.step('SETTING INITIAL VIEW...');
   viewer.camera.flyTo({
     destination: Cesium.Cartesian3.fromDegrees(-30, 20, 20000000),
     duration: 0,
   });
 
-  // Load Google 3D Tiles (default view)
+  // Step 2: 3D Tiles
+  splash.step('LOADING 3D TERRAIN...');
   try {
     await initGoogle3DTiles(viewer);
     controls.setTileMode(true);
   } catch (e) {
     console.warn('[WORLDVIEW] Google 3D Tiles failed:', e);
-    controls.showToast('3D TILES UNAVAILABLE', 'error');
+    splash.error('3D TILES UNAVAILABLE');
   }
 
-  // Only start flights at boot — other layers start on-demand when toggled
+  // Step 3: Flight data
+  splash.step('CONNECTING ADS-B FEEDS...');
   try {
     await flightTracker.start();
-    console.log('[WORLDVIEW] Flights ✓');
   } catch (e) {
     console.warn('[WORLDVIEW] Flights failed:', e);
-    controls.showToast('FLIGHT DATA UNAVAILABLE', 'error');
+    splash.error('FLIGHT DATA UNAVAILABLE');
   }
 
-  // Load only event cards at boot — all other overlays load on-demand via filter bar
+  // Step 4: Event cards
+  splash.step('LOADING CONFLICT EVENTS...');
   try {
     eventCardLayer.load();
-    console.log('[WORLDVIEW] Event Cards ✓');
   } catch (e) { console.warn('[WORLDVIEW] Event Cards failed:', e); }
 
-  // Register lazy loaders for conflict overlays (triggered by filter bar toggles)
-  // These will load on first toggle via the filterBar onToggle handler
+  // Step 5: Feed system ready
+  splash.step('INITIALIZING INTELLIGENCE FEED...');
 
-  // Load The Feed — information warfare layer
-  try {
-    // Feed starts in live mode — loads on first toggle (N key)
-    // For scenario replay: feedManager.loadScenario('epic-fury');
-    console.log('[WORLDVIEW] The Feed ✓');
-  } catch (e) { console.warn('[WORLDVIEW] The Feed failed:', e); }
-
+  splash.done();
   console.log('[WORLDVIEW] All systems online.');
 
   // Register command palette commands
@@ -524,6 +525,10 @@ async function boot() {
     { id: '3d', label: 'Toggle 3D Tiles', section: 'TOOLS', shortcut: 'D', action: () => { const enabled = toggleGoogle3D(viewer); controls.setTileMode(enabled); }},
     { id: 'hud', label: 'Toggle HUD', section: 'TOOLS', shortcut: 'H', action: () => hud.toggle() },
     { id: 'help', label: 'Show Keyboard Shortcuts', section: 'TOOLS', shortcut: '?', action: () => toggleHelp() },
+    { id: 'ticker', label: 'Toggle News Ticker', section: 'TOOLS', shortcut: 'A', action: () => newsTicker.toggle() },
+    { id: 'fog', label: 'Toggle Info Fog Overlay', section: 'FEED', shortcut: 'J', action: () => feedManager.toggleFogOverlay() },
+    { id: 'network', label: 'Toggle Network Graph', section: 'FEED', shortcut: 'K', action: () => feedManager.toggleNetworkGraph() },
+    { id: 'military', label: 'Toggle Military Filter', section: 'LAYERS', shortcut: 'M', action: () => { flightTracker.toggleMilitary(); controls.setLayerState('military', flightTracker.militaryMode); }},
   ]);
 }
 

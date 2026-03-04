@@ -1,37 +1,43 @@
 // Help Overlay — press ? to show keyboard shortcuts
 
 const SHORTCUTS = [
-  { section: 'LAYERS', items: [
-    { key: 'F', desc: 'Flights' },
+  { section: 'DATA LAYERS', items: [
+    { key: 'F', desc: 'Flights (ADS-B)' },
     { key: 'S', desc: 'Satellites' },
-    { key: 'N', desc: 'Live News Feed' },
-    { key: 'M', desc: 'Maritime / Ships' },
-    { key: 'G', desc: 'GPS Interference' },
-    { key: 'T', desc: 'Traffic' },
+    { key: 'B', desc: 'Maritime (AIS)' },
+    { key: 'G', desc: 'Earthquakes (USGS)' },
+    { key: 'T', desc: 'Traffic Particles' },
     { key: 'C', desc: 'CCTV Feeds' },
-    { key: 'W', desc: 'Strikes' },
+    { key: 'M', desc: 'Military Filter' },
+  ]},
+  { section: 'OSINT LAYERS', items: [
+    { key: 'N', desc: 'Live News Feed' },
+    { key: 'D', desc: 'GPS Interference' },
+    { key: 'Z', desc: 'No-Fly Zones' },
+    { key: 'X', desc: 'Strikes' },
     { key: 'L', desc: 'Shipping Lanes' },
-    { key: 'B', desc: 'Borders' },
-    { key: 'X', desc: 'Hex Bins' },
+    { key: 'J', desc: 'Info Fog Overlay' },
+    { key: 'K', desc: 'Network Graph' },
   ]},
-  { section: 'VIEWS', items: [
-    { key: '1-5', desc: 'Location Presets' },
+  { section: 'VISUAL FILTERS', items: [
+    { key: '1', desc: 'Normal' },
+    { key: '2', desc: 'Night Vision' },
+    { key: '3', desc: 'FLIR / Thermal' },
+    { key: '4', desc: 'CRT / Retro' },
+    { key: '5', desc: 'Enhanced' },
+  ]},
+  { section: 'NAVIGATION', items: [
+    { key: 'Q W E R', desc: 'Location Presets' },
+    { key: 'O Y U I', desc: 'More Presets' },
     { key: 'P', desc: 'Iran Theater' },
-    { key: 'D', desc: '3D Tiles Toggle' },
+  ]},
+  { section: 'UI', items: [
     { key: 'H', desc: 'HUD Toggle' },
-    { key: 'V', desc: 'ViewScout' },
-  ]},
-  { section: 'FILTERS', items: [
-    { key: 'Z', desc: 'Cycle Visual Filter' },
-    { key: 'E', desc: 'Effects Panel' },
-  ]},
-  { section: 'FEED', items: [
-    { key: 'J / K', desc: 'Prev / Next Claim' },
+    { key: 'V', desc: 'ViewScout Panel' },
+    { key: 'A', desc: 'News Ticker' },
     { key: '/', desc: 'Command Palette' },
-  ]},
-  { section: 'GENERAL', items: [
-    { key: 'Esc', desc: 'Close Panels' },
     { key: '?', desc: 'This Help' },
+    { key: 'Esc', desc: 'Close / Deselect' },
   ]},
 ];
 

@@ -812,7 +812,8 @@
 .threat-bar {
   position: fixed;
   top: 8px;
-  right: 8px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   gap: 2px;
   z-index: 800;

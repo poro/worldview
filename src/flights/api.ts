@@ -89,51 +89,35 @@ async function fetchRegion(lat: number, lon: number, dist: number): Promise<any>
   return data;
 }
 
+/**
+ * Fetch flights from server-side aggregated JSON file.
+ * The flight-aggregator.py systemd timer writes /public/flights.json every 15s.
+ * Client makes ONE request instead of 26 parallel API calls.
+ * Falls back to direct API calls if the aggregated file isn't available.
+ */
 export async function fetchFlights(bounds?: {
   lamin: number;
   lomin: number;
   lamax: number;
   lomax: number;
 }): Promise<OpenSkyResponse> {
-  const isDev = import.meta.env.DEV;
-
-  if (isDev) {
-    // Use same global regions as production but via vite proxy
-    const allAircraft: any[] = [];
-    const seen = new Set<string>();
-    let now = Date.now() / 1000;
-    
-    const results = await Promise.allSettled(
-      GLOBAL_REGIONS.map(async (r) => {
-        const url = `/adsbfi/api/v2/lat/${r.lat}/lon/${r.lon}/dist/250`;
-        const resp = await fetch(url);
-        if (!resp.ok) return null;
-        return resp.json();
-      })
-    );
-    
-    for (const result of results) {
-      if (result.status !== 'fulfilled' || !result.value) continue;
-      const data = result.value;
-      if (data.now) now = data.now;
-      const aircraft = data.aircraft || data.ac || [];
-      for (const ac of aircraft) {
-        const id = ac.hex || ac.icao24;
-        if (id && !seen.has(id)) {
-          seen.add(id);
-          allAircraft.push(ac);
-        }
-      }
+  // Try server-side aggregated data first (single file, no rate limits)
+  try {
+    const resp = await fetch('/flights.json');
+    if (resp.ok) {
+      const data = await resp.json();
+      const aircraft = data.aircraft || [];
+      console.log(`[WORLDVIEW] Flights: ${aircraft.length} aircraft from ${data.regions || '?'}/${data.total_regions || '?'} regions (aggregated)`);
+      return adsbfiToOpenSky({ now: data.now || Date.now() / 1000, aircraft });
     }
-    
-    console.log(`[WORLDVIEW] Dev flights: ${allAircraft.length} from ${GLOBAL_REGIONS.length} global regions`);
-    return adsbfiToOpenSky({ now, aircraft: allAircraft });
+  } catch (e) {
+    console.warn('[WORLDVIEW] Aggregated flights unavailable, falling back to direct API');
   }
 
-  // Production: fetch regions in staggered batches to avoid 429 rate limits
+  // Fallback: direct API calls via proxy (rate-limited but works as backup)
   try {
     const BATCH_SIZE = 3;
-    const BATCH_DELAY = 2000; // ms between batches
+    const BATCH_DELAY = 2000;
     const allAircraft: any[] = [];
     const seen = new Set<string>();
     let now = Date.now() / 1000;
@@ -162,7 +146,7 @@ export async function fetchFlights(bounds?: {
       }
     }
 
-    console.log(`[WORLDVIEW] Flights: ${allAircraft.length} from ${successCount}/${GLOBAL_REGIONS.length} regions`);
+    console.log(`[WORLDVIEW] Flights: ${allAircraft.length} from ${successCount}/${GLOBAL_REGIONS.length} regions (direct)`);
     return adsbfiToOpenSky({ now, aircraft: allAircraft });
   } catch (e) {
     console.error('Flight fetch failed:', e);

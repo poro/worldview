@@ -239,6 +239,7 @@
 /* Prevent overflow on small screens */
 #ui-overlay {
   overflow: hidden;
+  z-index: 10;
 }
 
 /* ============================
@@ -248,7 +249,7 @@
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   pointer-events: none;
-  z-index: 5;
+  z-index: 1;
   background: repeating-linear-gradient(
     0deg,
     rgba(0, 0, 0, 0.02) 0px,
@@ -262,7 +263,7 @@
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   pointer-events: none;
-  z-index: 4;
+  z-index: 1;
   background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.5) 100%);
 }
 
@@ -939,7 +940,7 @@
 .scanlines {
   position: fixed;
   inset: 0;
-  z-index: 999;
+  z-index: 1;
   pointer-events: none;
   background: repeating-linear-gradient(
     0deg,
@@ -948,6 +949,5 @@
     rgba(0, 0, 0, 0.03) 2px,
     rgba(0, 0, 0, 0.03) 4px
   );
-  mix-blend-mode: multiply;
 }
 .scanlines.off { display: none; }

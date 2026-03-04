@@ -107,7 +107,8 @@ export async function fetchFlights(bounds?: {
     if (resp.ok) {
       const data = await resp.json();
       const aircraft = data.aircraft || [];
-      console.log(`[WORLDVIEW] Flights: ${aircraft.length} aircraft from ${data.regions || '?'}/${data.total_regions || '?'} regions (aggregated)`);
+      const src = data.source || 'adsb.fi';
+      console.log(`[WORLDVIEW] Flights: ${aircraft.length} aircraft via ${src} (${data.regions || '?'})`);
       return adsbfiToOpenSky({ now: data.now || Date.now() / 1000, aircraft });
     }
   } catch (e) {

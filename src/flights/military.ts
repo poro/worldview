@@ -14,13 +14,13 @@ export interface MilitaryClassification {
 
 // US Military ICAO hex ranges
 const MILITARY_ICAO_RANGES: [number, number][] = [
-  [0xae0000, 0xae0fff], // US Army
+  // US Military (precise ranges — 0xac0000-0xacffff is civil, NOT military)
+  [0xae0000, 0xaeffff], // US Army aircraft
   [0xadf000, 0xadffff], // US Military various
-  [0xadf7c0, 0xadf7ff], // USAF
   [0xa00001, 0xa00fff], // US DOD
-  [0xac0000, 0xacffff], // US Military
+  // Allied military
   [0x3b0000, 0x3bffff], // France Military
-  [0x3f0000, 0x3fffff], // UK Military (RAF)
+  [0x3f4000, 0x3f7fff], // UK Military (RAF — narrowed from full 0x3f block)
   [0x43c000, 0x43cfff], // NATO
   [0x700000, 0x700fff], // Israel Military
   [0xe40000, 0xe40fff], // Brazil Military

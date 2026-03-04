@@ -438,13 +438,14 @@ smartInterval(() => {
 // Start all systems
 async function boot() {
   const splash = new BootSplash();
-  splash.setSteps(5);
+  splash.setSteps(6);
   console.log('[WORLDVIEW] Booting systems...');
 
-  // Step 1: Camera
-  splash.step('SETTING INITIAL VIEW...');
+  // Step 1: Camera — Iran theater default (active conflict zone)
+  splash.step('SETTING THEATER VIEW...');
   viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(-30, 20, 20000000),
+    destination: Cesium.Cartesian3.fromDegrees(53, 30, 5000000),
+    orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-45), roll: 0 },
     duration: 0,
   });
 
@@ -482,6 +483,32 @@ async function boot() {
     console.warn('[WORLDVIEW] Live feed failed:', e);
   }
 
+  // Step 6: Load conflict theater layers
+  splash.step('ACTIVATING THEATER OVERLAYS...');
+  try {
+    // Load all the rich scenario layers that make WorldView look like the reference
+    await Promise.allSettled([
+      lazyStart('airspace', () => airspaceLayer.load()),
+      lazyStart('strikes', () => strikeLayer.load()),
+      lazyStart('borders', () => countryLayer.load()),
+      lazyStart('gps', () => gpsLayer.load()),
+      lazyStart('blackout', () => internetBlackoutLayer.load()),
+      lazyStart('hexbins', () => hexBinLayer.load()),
+    ]);
+    // Toggle them visible
+    airspaceLayer.toggle(); // No-fly zones
+    strikeLayer.toggle();   // Strike markers
+    countryLayer.toggle();  // Country borders
+    gpsLayer.toggle();      // GPS interference
+    internetBlackoutLayer.toggle(); // Internet blackouts
+    hexBinLayer.toggle();   // Event density bins
+    // Enable military flight filter
+    flightTracker.setMilitaryMode(true);
+    controls.setLayerState('military', true);
+  } catch (e) {
+    console.warn('[WORLDVIEW] Theater overlays partially failed:', e);
+  }
+
   splash.done();
   console.log('[WORLDVIEW] All systems online.');
 
@@ -511,6 +538,11 @@ async function boot() {
       action: () => { flyToCinematic(viewer, p.lon, p.lat, p.alt, 2); controls.showToast(`NAVIGATING → ${p.label}`); },
     })),
     { id: 'iran', label: 'Navigate → Iran Theater', section: 'NAVIGATE', shortcut: 'P', action: () => { flyToCinematic(viewer, 53, 32, 3000000, 2); controls.showToast('NAVIGATING → IRAN THEATER'); }},
+    { id: 'scenario-epic', label: 'Load Epic Fury Scenario (Full Theater)', section: 'FEED', action: async () => {
+      controls.showToast('LOADING EPIC FURY SCENARIO...');
+      await feedManager.loadScenario('epic-fury');
+      flyToCinematic(viewer, 53, 30, 5000000, 2);
+    }},
     // Visual Filters
     { id: 'filter-normal', label: 'Filter: Normal', section: 'VISUAL', action: () => { filterManager.setFilter('normal'); controls.setActiveFilter('normal'); }},
     { id: 'filter-nvg', label: 'Filter: Night Vision', section: 'VISUAL', action: () => { filterManager.setFilter('nightvision'); controls.setActiveFilter('nightvision'); }},

@@ -473,8 +473,14 @@ async function boot() {
     eventCardLayer.load();
   } catch (e) { console.warn('[WORLDVIEW] Event Cards failed:', e); }
 
-  // Step 5: Feed system ready
+  // Step 5: Feed — load live data for ticker
   splash.step('INITIALIZING INTELLIGENCE FEED...');
+  try {
+    await feedManager.loadLive();
+    feedManager.startLiveRefresh(5 * 60 * 1000); // refresh every 5 min
+  } catch (e) {
+    console.warn('[WORLDVIEW] Live feed failed:', e);
+  }
 
   splash.done();
   console.log('[WORLDVIEW] All systems online.');
